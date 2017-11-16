@@ -12,9 +12,10 @@ def main(datafolder,outfolder):
     for term_name, filename, path in get_files(datafolder):
         with open(path) as file:
             text = file.read()
-        for rule,cond in rules:
-            if cond:
+        for name,rule,cond in rules:
+            if cond(term_name,filename):
                 text = rule(text)
+                print("Applied rule %s on %s" %(name,filename))
         outfilename = os.path.join(outfolder,term_name,filename+".txt")
         os.makedirs(os.path.dirname(outfilename), exist_ok=True)
         with open(outfilename,"w") as outfile:
