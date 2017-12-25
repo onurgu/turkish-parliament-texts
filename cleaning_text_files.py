@@ -32,7 +32,7 @@ def apply_rules(filename, term_name, text):
     for name, rule, cond in rules:
         if cond(term_name, filename):
             text = rule(text)
-            print("Applied rule %s on %s" % (name, filename))
+            # print("Applied rule %s on %s" % (name, filename))
     return text
 
 
@@ -69,7 +69,8 @@ if __name__ == "__main__":
     if args.command == "clean_directories":
         main(args.datafolder, args.output_folder)
     else:
-        text = "".join(sys.stdin.readlines())
+        text = " ".join(sys.stdin.readlines()) # WARN: it was "" before, " " is better because it
+                                               # does not incorrectly concatenate words.
         filename, term_name = extract_term_name(args.filename)
         cleaned_text = apply_rules(filename, term_name, str(text))
         print(cleaned_text)
