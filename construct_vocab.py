@@ -1,8 +1,10 @@
 import argparse
 import glob
+import logging
 import sys
 
-from utils import tokenize, print_err
+
+from utils import tokenize, print_err, turkish_lower
 
 config = {}
 
@@ -10,6 +12,7 @@ config["data_dir"] = "data/TXTs/"
 
 from gensim import corpora
 
+logger = logging.getLogger(__name__)
 
 def check_if_pdf_directory(filepath):
 
@@ -21,13 +24,12 @@ def check_if_pdf_directory(filepath):
 
 def combine_files_in_the_pdf_directory(filepath):
 
-    import os
     sorted_pagefilepaths = sorted(glob.glob(filepath+"*.processed"))
 
     document = []
     for page_filepath in sorted_pagefilepaths:
         with open(page_filepath, "r") as f:
-            document += tokenize(" ".join(f.readlines()))
+            document += [turkish_lower(x) for x in tokenize(" ".join(f.readlines()))]
 
     return document
 
@@ -46,7 +48,17 @@ if __name__ == "__main__":
     parser.add_argument("--corpus_filename",
                         default="tbmm_corpus.mm")
 
+    parser.add_argument("--log_filepath",
+                        default="construct_vocab.log")
+
+    parser.add_argument("--max_documents",
+                        type=int,
+                        default=0)
+
     args = parser.parse_args()
+
+    logging.basicConfig(filename=args.log_filepath,
+                        format='%(asctime)s : %(levelname)s : %(message)s', level=logging.INFO)
 
     if args.command == "construct_vocab":
 
@@ -89,8 +101,11 @@ if __name__ == "__main__":
 
         corpus = TbmmCorpus(metadata=True)
 
-        for filepath in glob.iglob(config["data_dir"] + '/**/', recursive=True):
-
+        for idx, filepath in enumerate(glob.iglob(config["data_dir"] + '/**/', recursive=True)):
+            # print(idx)
+            if args.max_documents != 0 and idx == args.max_documents:
+                print_err("Stopping as we hit the max documents limit: %d" % args.max_documents)
+                break
             if check_if_pdf_directory(filepath.replace(config["data_dir"], "")):
                 document = combine_files_in_the_pdf_directory(filepath)
                 metadata_filepath = filepath.replace(config["data_dir"], "")
@@ -98,12 +113,43 @@ if __name__ == "__main__":
             else:
                 continue
 
+        # corpus.dictionary.filter_extremes(no_below=5, no_above=0.5, keep_n=2000000, keep_tokens=None)
+        good_ids, n_removed = TbmmCorpus.filter_extremes(corpus.dictionary,
+                                                         no_below=5, no_above=0.5, keep_n=2000000,
+                                                         keep_tokens=None)
+
+        # do the actual filtering, then rebuild dictionary to remove gaps in ids
+        TbmmCorpus.filter_tokens(corpus.dictionary, good_ids=good_ids, compact_ids=False)
+
+        if n_removed:
+            logger.info("Starting to remap word ids in tbmmcorpus documents hashmap")
+            n_ids = len(corpus.dictionary.id2token)
+            for idx, (doc_id, document) in enumerate(corpus.documents.items()):
+                def check_and_alter(x):
+                    if x >= n_ids:
+                        return -1
+                    else:
+                        return x
+
+
+                if idx % 1000 == 0:
+                    logger.info("remapping: %d documents finished" % idx)
+                corpus.documents[doc_id] = map(check_and_alter, document)
+
         corpus.save_tbmm_corpus(args.corpus_filename)
 
-        from gensim.models.ldamodel import LdaModel
+        # from gensim.models.ldamodel import LdaModel
+        from gensim.models.ldamulticore import LdaMulticore
 
-        lda = LdaModel(corpus=corpus, id2word=corpus.dictionary.id2token, num_topics=20,
-                                              update_every=1, chunksize=100, passes=1)
+        print(corpus.dictionary.id2token)
+
+        # setting metadata to False is required because of the way logperplexity code requires the
+        # output of get_texts to be.
+        corpus.metadata = False
+        lda = LdaMulticore(workers=3, corpus=corpus, id2word=corpus.dictionary,
+                           num_topics=20,
+                           eval_every=100,
+                           chunksize=100, passes=10)
 
         lda.print_topics(20)
 
