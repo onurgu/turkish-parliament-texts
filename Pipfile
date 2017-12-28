@@ -11,11 +11,10 @@ name = "pypi"
 
 [packages]
 
-ipython = "*"
-
 gensim = "*"
-
 nltk = "*"
+ipython = "*"
+matplotlib = "*"
 
 
 [requires]
