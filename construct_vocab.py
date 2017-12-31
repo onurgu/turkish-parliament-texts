@@ -51,6 +51,10 @@ if __name__ == "__main__":
     parser.add_argument("--corpus_filename",
                         default="tbmm_corpus.mm")
 
+    parser.add_argument("--train_lda",
+                        action="store_true",
+                        default=False)
+
     parser.add_argument("--log_filepath",
                         default="construct_vocab.log")
 
@@ -116,53 +120,55 @@ if __name__ == "__main__":
             else:
                 continue
 
-        # corpus.dictionary.filter_extremes(no_below=5, no_above=0.5, keep_n=2000000, keep_tokens=None)
-        good_ids, n_removed = TbmmCorpus.filter_extremes(corpus.dictionary,
-                                                         no_below=5, no_above=0.5, keep_n=2000000,
-                                                         keep_tokens=None)
 
-        # do the actual filtering, then rebuild dictionary to remove gaps in ids
-        TbmmCorpus.filter_tokens(corpus.dictionary, good_ids=good_ids, compact_ids=False)
-
-        logger.info("construct_vocab: rebuilding dictionary, shrinking gaps")
-
-        # build mapping from old id -> new id
-        idmap = dict(zip(sorted(itervalues(corpus.dictionary.token2id)), range(len(corpus.dictionary.token2id))))
-
-        # reassign mappings to new ids
-        corpus.dictionary.token2id = {token: idmap[tokenid] for token, tokenid in iteritems(corpus.dictionary.token2id)}
-        corpus.dictionary.id2token = {}
-        corpus.dictionary.dfs = {idmap[tokenid]: freq for tokenid, freq in iteritems(corpus.dictionary.dfs)}
-
-        if n_removed:
-            logger.info("Starting to remap word ids in tbmmcorpus documents hashmap")
-            # def check_and_replace(x):
-            #     if x in idmap:
-            #         return x
-            #     else:
-            #         return -1
-            for idx, (doc_id, document) in enumerate(corpus.documents.items()):
-                if idx % 1000 == 0:
-                    logger.info("remapping: %d documents finished" % idx)
-                # corpus.documents[doc_id] = [check_and_replace(oldid) for oldid in document]
-                corpus.documents[doc_id] = [idmap[oldid] for oldid in document if oldid in idmap]
+        # pruning
+        # good_ids, n_removed = TbmmCorpus.filter_extremes(corpus.dictionary,
+        #                                                  no_below=5, no_above=0.5, keep_n=2000000,
+        #                                                  keep_tokens=None)
+        #
+        # # do the actual filtering, then rebuild dictionary to remove gaps in ids
+        # TbmmCorpus.filter_tokens(corpus.dictionary, good_ids=good_ids, compact_ids=False)
+        #
+        # logger.info("construct_vocab: rebuilding dictionary, shrinking gaps")
+        #
+        # # build mapping from old id -> new id
+        # idmap = dict(zip(sorted(itervalues(corpus.dictionary.token2id)), range(len(corpus.dictionary.token2id))))
+        #
+        # # reassign mappings to new ids
+        # corpus.dictionary.token2id = {token: idmap[tokenid] for token, tokenid in iteritems(corpus.dictionary.token2id)}
+        # corpus.dictionary.id2token = {}
+        # corpus.dictionary.dfs = {idmap[tokenid]: freq for tokenid, freq in iteritems(corpus.dictionary.dfs)}
+        #
+        # if n_removed:
+        #     logger.info("Starting to remap word ids in tbmmcorpus documents hashmap")
+        #     # def check_and_replace(x):
+        #     #     if x in idmap:
+        #     #         return x
+        #     #     else:
+        #     #         return -1
+        #     for idx, (doc_id, document) in enumerate(corpus.documents.items()):
+        #         if idx % 1000 == 0:
+        #             logger.info("remapping: %d documents finished" % idx)
+        #         # corpus.documents[doc_id] = [check_and_replace(oldid) for oldid in document]
+        #         corpus.documents[doc_id] = [idmap[oldid] for oldid in document if oldid in idmap]
 
         corpus.save_tbmm_corpus(args.corpus_filename)
 
-        # from gensim.models.ldamodel import LdaModel
-        from gensim.models.ldamulticore import LdaMulticore
+        if args.train_lda:
+            # from gensim.models.ldamodel import LdaModel
+            from gensim.models.ldamulticore import LdaMulticore
 
-        # setting metadata to False is required because of the way logperplexity code requires the
-        # output of get_texts to be.
-        corpus.metadata = False
-        lda = LdaMulticore(workers=19, corpus=corpus, id2word=corpus.dictionary,
-                           num_topics=20,
-                           eval_every=100,
-                           chunksize=100, passes=10)
+            # setting metadata to False is required because of the way logperplexity code requires the
+            # output of get_texts to be.
+            corpus.metadata = False
+            lda = LdaMulticore(workers=19, corpus=corpus, id2word=corpus.dictionary,
+                               num_topics=20,
+                               eval_every=100,
+                               chunksize=100, passes=10)
 
-        lda.print_topics(20)
+            lda.print_topics(20)
 
-        lda.save("tbmm_lda.model")
+            lda.save("tbmm_lda.model")
 
 
 

@@ -1,17 +1,23 @@
 import codecs
+from collections import defaultdict as dd
 
 import logging
+import os
+import re
+
+from six import itervalues, iteritems
+
+import matplotlib
+matplotlib.use('Agg')
+import matplotlib.pyplot as plt
 
 from gensim.corpora.textcorpus import TextCorpus
 from gensim.corpora.dictionary import Dictionary
 
-from collections import defaultdict as dd
-
 from utils import tokenize, print_err
 
-from six import itervalues, iteritems
-
 logger = logging.getLogger(__name__)
+
 
 class TbmmCorpus(TextCorpus):
 
@@ -112,34 +118,34 @@ class TbmmCorpus(TextCorpus):
             'filepath': filepath
         }
 
-        if len(self.documents) % 100 == 0:
-            print_err("n_documents: %d" % len(self.documents))
-            good_ids, n_removed = TbmmCorpus.filter_extremes(self.dictionary, no_below=0, no_above=1, keep_n=2000000)
-            # do the actual filtering, then rebuild dictionary to remove gaps in ids
-            TbmmCorpus.filter_tokens(self.dictionary, good_ids=good_ids, compact_ids=False)
-
-            logger.info("tbmmcorpus rebuilding dictionary, shrinking gaps")
-
-            # build mapping from old id -> new id
-            idmap = dict(zip(sorted(itervalues(self.dictionary.token2id)), range(len(self.dictionary.token2id))))
-
-            # reassign mappings to new ids
-            self.dictionary.token2id = {token: idmap[tokenid] for token, tokenid in iteritems(self.dictionary.token2id)}
-            self.dictionary.id2token = {}
-            self.dictionary.dfs = {idmap[tokenid]: freq for tokenid, freq in iteritems(self.dictionary.dfs)}
-
-            if n_removed:
-                logger.info("Starting to remap word ids in tbmmcorpus documents hashmap")
-                # def check_and_replace(x):
-                #     if x in idmap:
-                #         return x
-                #     else:
-                #         return -1
-                for idx, (doc_id, document) in enumerate(self.documents.items()):
-                    if idx % 1000 == 0:
-                        logger.info("remapping: %d documents finished" % idx)
-                    # self.documents[doc_id] = [check_and_replace(oldid) for oldid in document]
-                    self.documents[doc_id] = [idmap[oldid] for oldid in document if oldid in idmap]
+        # if len(self.documents) % 100 == 0:
+        #     print_err("n_documents: %d" % len(self.documents))
+        #     good_ids, n_removed = TbmmCorpus.filter_extremes(self.dictionary, no_below=0, no_above=1, keep_n=2000000)
+        #     # do the actual filtering, then rebuild dictionary to remove gaps in ids
+        #     TbmmCorpus.filter_tokens(self.dictionary, good_ids=good_ids, compact_ids=False)
+        #
+        #     logger.info("tbmmcorpus rebuilding dictionary, shrinking gaps")
+        #
+        #     # build mapping from old id -> new id
+        #     idmap = dict(zip(sorted(itervalues(self.dictionary.token2id)), range(len(self.dictionary.token2id))))
+        #
+        #     # reassign mappings to new ids
+        #     self.dictionary.token2id = {token: idmap[tokenid] for token, tokenid in iteritems(self.dictionary.token2id)}
+        #     self.dictionary.id2token = {}
+        #     self.dictionary.dfs = {idmap[tokenid]: freq for tokenid, freq in iteritems(self.dictionary.dfs)}
+        #
+        #     if n_removed:
+        #         logger.info("Starting to remap word ids in tbmmcorpus documents hashmap")
+        #         # def check_and_replace(x):
+        #         #     if x in idmap:
+        #         #         return x
+        #         #     else:
+        #         #         return -1
+        #         for idx, (doc_id, document) in enumerate(self.documents.items()):
+        #             if idx % 1000 == 0:
+        #                 logger.info("remapping: %d documents finished" % idx)
+        #             # self.documents[doc_id] = [check_and_replace(oldid) for oldid in document]
+        #             self.documents[doc_id] = [idmap[oldid] for oldid in document if oldid in idmap]
 
     def getstream(self):
         return super().getstream()
@@ -232,6 +238,12 @@ class TbmmCorpus(TextCorpus):
         document_bow = sorted(iteritems(counter))
         return document_bow
 
+    @staticmethod
+    def count_howmany_given_word_ids(document_bow, target_word_ids):
+        target_freq_for_this_document = \
+            sum([freq for word_id, freq in document_bow if word_id in target_word_ids])
+        return target_freq_for_this_document
+
 
     def generate_word_counts(self):
 
@@ -241,42 +253,96 @@ class TbmmCorpus(TextCorpus):
             if idx % 1000 == 0:
                 logger.info("word_counts: %d documents" % idx)
 
-    def query_word_count_across_all_documents(self, target_word_id):
+    def query_word_count_across_all_documents(self, target_word_id_or_ids):
 
-        counts = {}
+        if not isinstance(target_word_id_or_ids, list):
+            target_word_ids = [target_word_id_or_ids]
+        else:
+            target_word_ids = target_word_id_or_ids
+
+        total_count = 0
+        counts = dd(int)
 
         for idx, (doc_id, document_word_counts) in enumerate(self.documents_word_counts.items()):
             target_freq_for_this_document = \
-                [freq for word_id, freq in document_word_counts if word_id == target_word_id]
+                [freq for word_id, freq in document_word_counts if word_id in target_word_ids]
+
+            target_freq_for_this_document = \
+                TbmmCorpus.count_howmany_given_word_ids(document_word_counts, target_word_ids)
+
             if target_freq_for_this_document:
-                target_freq_for_this_document = target_freq_for_this_document[0]
+                # target_freq_for_this_document = target_freq_for_this_document[0]
 
                 filepath = self.documents_metadata[doc_id]['filepath']
 
-                tokens = self.metadata2description[filepath]
+                # tokens = self.metadata2description[filepath]
 
-                main_type = tokens[0]
-                second_type_and_term = tokens[1]
-                pdf_filename = tokens[2]
+                counts[filepath] += target_freq_for_this_document
+                total_count += target_freq_for_this_document
 
-                if main_type not in counts:
-                    counts[main_type] = dict()
-                    counts[main_type][second_type_and_term] = dict()
-                    counts[main_type][second_type_and_term][pdf_filename] = target_freq_for_this_document
-                else:
-                    if second_type_and_term not in counts[main_type]:
-                        counts[main_type][second_type_and_term] = dict()
-                        counts[main_type][second_type_and_term][
-                            pdf_filename] = target_freq_for_this_document
-                    else:
-                        counts[main_type][second_type_and_term][
-                            pdf_filename] = target_freq_for_this_document
+                # main_type = tokens[0]
+                # second_type_and_term = tokens[1]
+                # pdf_filename = tokens[3]
+                #
+                #
+                # if main_type not in counts:
+                #     counts[main_type] = dict()
+                #     counts[main_type][second_type_and_term] = dict()
+                #     counts[main_type][second_type_and_term][pdf_filename] = target_freq_for_this_document
+                # else:
+                #     if second_type_and_term not in counts[main_type]:
+                #         counts[main_type][second_type_and_term] = dict()
+                #         counts[main_type][second_type_and_term][
+                #             pdf_filename] = target_freq_for_this_document
+                #     else:
+                #         counts[main_type][second_type_and_term][
+                #             pdf_filename] = target_freq_for_this_document
 
             if idx % 1000 == 0:
                 logger.info("%d documents scanned for word_id")
-        return counts
+        return counts, total_count
 
+    def plot_word_freqs_given_a_regexp(self, regexp_to_select_keywords, keyword="default", format="pdf"):
+        """
+        
+        :param regexp_to_select_keywords: r"^(siki|sıkı)y(o|ö)net(i|ı)m"
+        :return: 
+        """
+        all_keywords = [(x, y) for x, y in self.dictionary.token2id.items() if
+         re.match(regexp_to_select_keywords, x)]
 
+        counts, total_count = self.query_word_count_across_all_documents([x[1] for x in all_keywords])
+
+        # filter only tbmm documents for now
+        plot_values = sorted([(x, y) for x, y in counts.items() if re.match(r"^tbmm/", x)],
+                             key=lambda x: x[0])
+
+        self.plot_single_values_for_documents(os.path.join(self.config["plots_dir"], keyword),
+                                              plot_values,
+                                              format=format)
+        return plot_values, counts, total_count, all_keywords
+
+    def _plot_single_values_for_documents(self, plot_values):
+
+        fig = plt.figure(figsize=(16, 9), dpi=300)
+
+        plt.plot(range(len(plot_values)), [x[1] for x in plot_values],
+                 marker='+', markersize=3,
+                 linestyle="None")
+
+        plt.xticks(range(0, len(plot_values), 100),
+                   [plot_values[i][0].split("/")[1] for i in range(0, len(plot_values), 100)],
+                   rotation='vertical')
+        plt.margins(0.2)
+        plt.subplots_adjust(bottom=0.15)
+
+        return fig
+
+    def plot_single_values_for_documents(self, filename, plot_values, format="pdf"):
+        fig = self._plot_single_values_for_documents(plot_values)
+
+        fig.savefig(filename + "." + format)
+        fig.clear()
 
 
     def prepare_metadata_to_description_dictionary(self):
