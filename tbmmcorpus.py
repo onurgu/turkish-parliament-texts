@@ -344,6 +344,42 @@ class TbmmCorpus(TextCorpus):
         fig.savefig(filename + "." + format)
         fig.clear()
 
+    def calculate_topic_distributions_of_all_documents(self, lda):
+        """
+        
+        :param lda: 
+        :type lda: gensim.models.ldamodel.LdaModel
+        :return: 
+        """
+        n_topics = lda.num_topics
+        topic_dist_matrix = []
+        label_vector = []
+        for idx, (doc_id, document_bow) in enumerate(self.documents_word_counts.items()):
+            topic_dist = lda.get_document_topics(document_bow)
+            topic_dist_full_vector = [0] * n_topics
+            for topic_id, prob in topic_dist:
+                topic_dist_full_vector[topic_id] = prob
+            topic_dist_matrix += [topic_dist_full_vector]
+            label_vector += [self.documents_metadata[doc_id]['filepath']]
+
+        return topic_dist_matrix, label_vector
+
+    def plot_topic_across_time(self, topic_no, topic_dist_matrix, label_vector, format="pdf"):
+
+        sorted_zipped_topic_dist_matrix = sorted(zip(topic_dist_matrix, label_vector),
+                                                 key=lambda x: x[1])
+
+        tbmm_topic_dist_matrix = [x for x in sorted_zipped_topic_dist_matrix if
+                                  re.match(r"^tbmm/", x[1])]
+
+        plot_values = [(value[1], value[0][topic_no]) for id, value in enumerate(tbmm_topic_dist_matrix)]
+
+        self.plot_single_values_for_documents(os.path.join(self.config["plots_dir"], "topic_%d" % topic_no),
+                                              plot_values,
+                                              format=format)
+
+
+
 
     def prepare_metadata_to_description_dictionary(self):
         """
