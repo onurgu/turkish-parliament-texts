@@ -1,5 +1,6 @@
 import codecs
 from collections import defaultdict as dd
+from functools import cmp_to_key
 
 import logging
 import os
@@ -18,6 +19,42 @@ from utils import tokenize, print_err
 
 logger = logging.getLogger(__name__)
 
+
+def _compare_two_document_labels(coded_filepaths):
+    """
+    
+    :type left: str
+    :param left: 
+    :param right: 
+    :return: 
+    """
+
+    """
+    ***tbmm/d01-y1 'den tbmm/d11-y3 'e***
+    tbmm/d11-y3 'den baslayarak ***tbt-ty01 ... tbt-ty19 'a***
+    tbt-ty19 'dan sonra
+    ***mgk/mgk-d00***
+    sonra 
+    ***tbmm/d17-y1 'den baslayarak tbmm/d24-y3 'e*** kadar
+    """
+
+    # re.match(r"^tbmm/", x)
+
+    def compare(left, right):
+
+        if coded_filepaths[left[1]] < coded_filepaths[right[1]]:
+            return -1
+        elif coded_filepaths[left[1]] > coded_filepaths[right[1]]:
+            return 1
+        else:
+            if left[1] < right[1]:
+                return -1
+            elif left[1] == right[1]:
+                return 0
+            else:
+                return 1
+
+    return compare
 
 class TbmmCorpus(TextCorpus):
 
@@ -313,9 +350,12 @@ class TbmmCorpus(TextCorpus):
 
         counts, total_count = self.query_word_count_across_all_documents([x[1] for x in all_keywords])
 
-        # filter only tbmm documents for now
-        plot_values = sorted([(x, y) for x, y in counts.items() if re.match(r"^tbmm/", x)],
-                             key=lambda x: x[0])
+        # # filter only tbmm documents for now
+        # plot_values = sorted([(x, y) for x, y in counts.items() if re.match(r"^tbmm/", x)],
+        #                      key=lambda x: x[0])
+
+        plot_values = sorted([(y, x) for x, y in counts.items() if re.match(r"^(tbmm|tbt|mgk)/", x)],
+                                                 key=cmp_to_key(self.compare_two_document_labels))
 
         self.plot_single_values_for_documents(os.path.join(self.config["plots_dir"], keyword),
                                               plot_values,
@@ -366,11 +406,16 @@ class TbmmCorpus(TextCorpus):
 
     def plot_topic_across_time(self, topic_no, topic_dist_matrix, label_vector, format="pdf"):
 
-        sorted_zipped_topic_dist_matrix = sorted(zip(topic_dist_matrix, label_vector),
-                                                 key=lambda x: x[1])
+        # sorted_zipped_topic_dist_matrix = sorted(zip(topic_dist_matrix, label_vector),
+        #                                          key=lambda x: x[1])
 
-        tbmm_topic_dist_matrix = [x for x in sorted_zipped_topic_dist_matrix if
-                                  re.match(r"^tbmm/", x[1])]
+        sorted_zipped_topic_dist_matrix = sorted(zip(topic_dist_matrix, label_vector),
+                                                 key=cmp_to_key(self.compare_two_document_labels))
+
+        # tbmm_topic_dist_matrix = [x for x in sorted_zipped_topic_dist_matrix if
+        #                           re.match(r"^tbmm/", x[1])]
+
+        tbmm_topic_dist_matrix = sorted_zipped_topic_dist_matrix
 
         plot_values = [(value[1], value[0][topic_no]) for id, value in enumerate(tbmm_topic_dist_matrix)]
 
@@ -417,6 +462,60 @@ class TbmmCorpus(TextCorpus):
                                    row[1].strip()]
                         else:
                             logger.warning("incompatible url: " + row[0])
+
+        unsorted_filepaths = [y for y in
+                              sorted([x['filepath'] for x in self.documents_metadata.values()]) if
+                              re.match(r"^(tbmm|tbt|mgk)/", y)]
+
+        coded_filepaths = {}
+        for filepath in unsorted_filepaths:
+            if re.match(r"^tbmm/d(01|02|03|04|05|06|07|08|09|10|11)", filepath):
+                code = 1
+            elif re.match(r"^tbt/", filepath):
+                code = 2
+            elif re.match(r"^mgk/", filepath):
+                code = 3
+            elif re.match(r"^tbmm/d(17|18|19|20|21|22|23|24)", filepath):
+                code = 4
+            else:
+                code = 0
+            coded_filepaths[filepath] = code
+
+        self.compare_two_document_labels = _compare_two_document_labels(coded_filepaths)
+
+
+def prepare_for_analysis():
+    import configparser
+
+    config_parser = configparser.ConfigParser()
+    config_parser.read("config.ini")
+    config = config_parser['default']
+
+    from tbmmcorpus import TbmmCorpus
+
+    corpus = TbmmCorpus(metadata=True, config=config)
+
+    corpus.load_tbmm_corpus("corpus-v0.1/tbmm_corpus.mm")
+
+    corpus.prepare_metadata_to_description_dictionary()
+
+    corpus.generate_word_counts()
+
+    from gensim.models.ldamodel import LdaModel
+    lda = LdaModel.load("tbmm_lda.model.passes_100")
+
+    import matplotlib
+    matplotlib.use('Agg')  # Must be before importing matplotlib.pyplot or pylab!
+    import matplotlib.pyplot as plt
+
+    topic_dist_matrix, label_vector = corpus.calculate_topic_distributions_of_all_documents(lda)
+
+    for topic_no in range(1, 20):
+        corpus.plot_topic_across_time(topic_no, topic_dist_matrix, label_vector)
+
+    corpus.plot_word_freqs_given_a_regexp(r"^lokavt", keyword="lokavt")
+
+
 
 
 if __name__ == "__main__":
