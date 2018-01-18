@@ -22,11 +22,11 @@ logger = logging.getLogger(__name__)
 
 def _compare_two_document_labels(coded_filepaths):
     """
-    
+
     :type left: str
-    :param left: 
-    :param right: 
-    :return: 
+    :param left:
+    :param right:
+    :return:
     """
 
     """
@@ -34,7 +34,7 @@ def _compare_two_document_labels(coded_filepaths):
     tbmm/d11-y3 'den baslayarak ***tbt-ty01 ... tbt-ty19 'a***
     tbt-ty19 'dan sonra
     ***mgk/mgk-d00***
-    sonra 
+    sonra
     ***tbmm/d17-y1 'den baslayarak tbmm/d24-y3 'e*** kadar
     """
 
@@ -341,9 +341,9 @@ class TbmmCorpus(TextCorpus):
 
     def plot_word_freqs_given_a_regexp(self, regexp_to_select_keywords, keyword="default", format="pdf"):
         """
-        
+
         :param regexp_to_select_keywords: r"^(siki|sıkı)y(o|ö)net(i|ı)m"
-        :return: 
+        :return:
         """
         all_keywords = [(x, y) for x, y in self.dictionary.token2id.items() if
          re.match(regexp_to_select_keywords, x)]
@@ -354,8 +354,8 @@ class TbmmCorpus(TextCorpus):
         # plot_values = sorted([(x, y) for x, y in counts.items() if re.match(r"^tbmm/", x)],
         #                      key=lambda x: x[0])
 
-        plot_values = sorted([(y, x) for x, y in counts.items() if re.match(r"^(tbmm|tbt|mgk)/", x)],
-                                                 key=cmp_to_key(self.compare_two_document_labels))
+        plot_values = [(x, y) for y, x in sorted([(y, x) for x, y in counts.items() if re.match(r"^(tbmm|tbt|mgk)/", x)],
+                                                 key=cmp_to_key(self.compare_two_document_labels))]
 
         self.plot_single_values_for_documents(os.path.join(self.config["plots_dir"], keyword),
                                               plot_values,
@@ -386,10 +386,10 @@ class TbmmCorpus(TextCorpus):
 
     def calculate_topic_distributions_of_all_documents(self, lda):
         """
-        
-        :param lda: 
+
+        :param lda:
         :type lda: gensim.models.ldamodel.LdaModel
-        :return: 
+        :return:
         """
         n_topics = lda.num_topics
         topic_dist_matrix = []
@@ -537,7 +537,3 @@ if __name__ == "__main__":
     # from gensim.models.ldamodel import LdaModel
     #
     # lda = LdaModel.load("tbmm_lda.model")
-
-
-
-
