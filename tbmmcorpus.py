@@ -290,7 +290,7 @@ class TbmmCorpus(TextCorpus):
             if idx % 1000 == 0:
                 logger.info("word_counts: %d documents" % idx)
 
-    def query_word_count_across_all_documents(self, target_word_id_or_ids):
+    def query_word_count_across_all_documents(self, target_word_id_or_ids, threshold=1):
 
         if not isinstance(target_word_id_or_ids, list):
             target_word_ids = [target_word_id_or_ids]
@@ -307,7 +307,7 @@ class TbmmCorpus(TextCorpus):
             target_freq_for_this_document = \
                 TbmmCorpus.count_howmany_given_word_ids(document_word_counts, target_word_ids)
 
-            if target_freq_for_this_document:
+            if target_freq_for_this_document >= threshold:
                 # target_freq_for_this_document = target_freq_for_this_document[0]
 
                 filepath = self.documents_metadata[doc_id]['filepath']
