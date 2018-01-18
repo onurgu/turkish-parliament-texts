@@ -362,6 +362,41 @@ class TbmmCorpus(TextCorpus):
                                               format=format)
         return plot_values, counts, total_count, all_keywords
 
+    def plot_word_freqs_given_a_regexp_for_each_year(self, regexp_to_select_keywords, keyword="default", format="pdf"):
+        """
+
+        :param regexp_to_select_keywords: r"^(siki|sıkı)y(o|ö)net(i|ı)m"
+        :return:
+        """
+        all_keywords = [(x, y) for x, y in self.dictionary.token2id.items() if
+         re.match(regexp_to_select_keywords, x)]
+
+        counts, total_count = self.query_word_count_across_all_documents([x[1] for x in all_keywords], threshold=1)
+
+        # # filter only tbmm documents for now
+        # plot_values = sorted([(x, y) for x, y in counts.items() if re.match(r"^tbmm/", x)],
+        #                      key=lambda x: x[0])
+
+        plot_values = [(x, y) for y, x in sorted([(y, x) for x, y in counts.items() if re.match(r"^(tbmm|tbt|mgk)/", x)],
+                                                 key=cmp_to_key(self.compare_two_document_labels))]
+
+        donem_dict = defaultdict(int) ; donem_doc_count = defaultdict(int) ; donem_dict_normalized = defaultdict(int)
+
+        for x,y in plot_values:
+             term_str = x.split("/")[1]
+             donem_dict[term_str] += y
+             donem_doc_count[term_str] +=1
+
+
+        for term in donem_dict.keys():
+             donem_dict_normalized[term] = donem_dict[term] / donem_doc_count[term]
+
+
+        self.plot_single_values_for_documents(os.path.join(self.config["plots_dir"], keyword+"_normalized"),
+                                              donem_dict_normalized,
+                                              format=format)
+        return donem_dict_normalized, counts, total_count, all_keywords
+
     def _plot_single_values_for_documents(self, plot_values):
 
         fig = plt.figure(figsize=(16, 9), dpi=300)
