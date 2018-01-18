@@ -12,10 +12,10 @@
      
 Example code to save a figure:
    
-   pipenv shell
-   ipython
-   import run
-   run.corpus.plot_word_freqs_given_a_regexp(r"^mebus", keyword="mebus")
+    pipenv shell
+    ipython
+    import corpus_loader
+    corpus_loader.corpus.plot_word_freqs_given_a_regexp(r"^mebus", keyword="mebus")
    
     
 ## Preprocessing
