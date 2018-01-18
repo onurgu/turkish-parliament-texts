@@ -380,7 +380,7 @@ class TbmmCorpus(TextCorpus):
         plot_values = [(x, y) for y, x in sorted([(y, x) for x, y in counts.items() if re.match(r"^(tbmm|tbt|mgk)/", x)],
                                                  key=cmp_to_key(self.compare_two_document_labels))]
 
-        donem_dict = defaultdict(int) ; donem_doc_count = defaultdict(int) ; donem_dict_normalized = defaultdict(int)
+        donem_dict = dd(int) ; donem_doc_count = dd(int) ; donem_dict_normalized = dd(int)
 
         for x,y in plot_values:
              term_str = x.split("/")[1]
@@ -391,10 +391,23 @@ class TbmmCorpus(TextCorpus):
         for term in donem_dict.keys():
              donem_dict_normalized[term] = donem_dict[term] / donem_doc_count[term]
 
+        plot_values = donem_dict_normalized
+        #self.plot_single_values_for_documents(os.path.join(self.config["plots_dir"], keyword+"_normalized"),
+        #                                      plot_values,
+        #                                      format=format)
+        fig = plt.figure(figsize=(16, 9), dpi=300)
 
-        self.plot_single_values_for_documents(os.path.join(self.config["plots_dir"], keyword+"_normalized"),
-                                              donem_dict_normalized,
-                                              format=format)
+        plt.plot(plot_values.keys(), plot_values.values(),
+                 marker='+', markersize=3,
+                 linestyle="None")
+
+        #plt.xticks(range(0, len(plot_values), 100),
+        #           [plot_values[i][0].split("/")[1] for i in range(0, len(plot_values), 100)],
+        #           rotation='vertical')
+        plt.margins(0.2)
+        plt.subplots_adjust(bottom=0.15)
+        filename = os.path.join(self.config["plots_dir"], keyword+"_normalized")
+        fig.savefig(filename + "." + format)
         return donem_dict_normalized, counts, total_count, all_keywords
 
     def _plot_single_values_for_documents(self, plot_values):
