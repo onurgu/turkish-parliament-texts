@@ -15,7 +15,7 @@ Example code to save a figure:
     pipenv shell
     ipython
     import corpus_loader
-    corpus_loader.corpus.plot_word_freqs_given_a_regexp(r"^mebus", keyword="mebus")
+    plot_values, counts, total_count, all_keywords = corpus_loader.corpus.plot_word_freqs_given_a_regexp(r"^mebus", keyword="mebus")
    
     
 ## Preprocessing
