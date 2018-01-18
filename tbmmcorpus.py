@@ -339,7 +339,7 @@ class TbmmCorpus(TextCorpus):
                 logger.info("%d documents scanned for word_id")
         return counts, total_count
 
-    def plot_word_freqs_given_a_regexp(self, regexp_to_select_keywords, keyword="default", format="pdf"):
+    def plot_word_freqs_given_a_regexp(self, regexp_to_select_keywords, keyword="default", format="pdf", threshold=1):
         """
 
         :param regexp_to_select_keywords: r"^(siki|sıkı)y(o|ö)net(i|ı)m"
@@ -348,7 +348,7 @@ class TbmmCorpus(TextCorpus):
         all_keywords = [(x, y) for x, y in self.dictionary.token2id.items() if
          re.match(regexp_to_select_keywords, x)]
 
-        counts, total_count = self.query_word_count_across_all_documents([x[1] for x in all_keywords])
+        counts, total_count = self.query_word_count_across_all_documents([x[1] for x in all_keywords], threshold=threshold)
 
         # # filter only tbmm documents for now
         # plot_values = sorted([(x, y) for x, y in counts.items() if re.match(r"^tbmm/", x)],
