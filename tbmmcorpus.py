@@ -367,14 +367,16 @@ class TbmmCorpus(TextCorpus):
         plt.gca().spines['top'].set_visible(False)
         plt.gca().spines['right'].set_visible(False)
         linestyles = ['-', '--', '-.', ':']
+        legends = []
         for regexp_to_select_keywords in lo_regexp_to_select_keywords:
             donem_dict_normalized, counts, total_count, all_keywords = self._word_freqs_given_a_regexp_for_each_year(regexp_to_select_keywords)
             plot_values = donem_dict_normalized
             plot_values = sorted(donem_dict_normalized.items(), key=lambda x: x[0])
             linestyle = linestyles.pop()
             plt.plot([x[0] for x in plot_values] , [x[1] for x in plot_values],
-                     #marker='+', markersize=3,
+                     label=regexp_to_select_keywords,
                      linestyle=linestyle)
+            legends.append(regexp_to_select_keywords)
 
             #plt.xticks(range(0, len(plot_values), 100),
             #           [plot_values[i][0].split("/")[1] for i in range(0, len(plot_values), 100)],
@@ -458,6 +460,21 @@ class TbmmCorpus(TextCorpus):
             label_vector += [self.documents_metadata[doc_id]['filepath']]
 
         return topic_dist_matrix, label_vector
+
+    def plot_topic_by_year(self, topic_no, topic_dist_matrix, label_vector, format="pdf"):
+        import ipdb ; ipdb.set_trace()
+        sorted_zipped_topic_dist_matrix = sorted(zip(topic_dist_matrix, label_vector),
+                                                 key=cmp_to_key(self.compare_two_document_labels))
+
+        tbmm_topic_dist_matrix = sorted_zipped_topic_dist_matrix
+
+        plot_values = [(value[1], value[0][topic_no]) for id, value in enumerate(tbmm_topic_dist_matrix)]
+
+        plt.plot([x[0] for x in plot_values] , [x[1] for x in plot_values], label="Topic %d" % topic_no)
+        plt.subplots_adjust(bottom=0.15)
+        filename = os.path.join(self.config["plots_dir"], "topic_%d" % topic_no)
+        fig.savefig(filename + "." + format)
+
 
     def plot_topic_across_time(self, topic_no, topic_dist_matrix, label_vector, format="pdf"):
 
