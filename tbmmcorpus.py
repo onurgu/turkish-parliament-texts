@@ -16,7 +16,7 @@ from gensim.corpora.textcorpus import TextCorpus
 from gensim.corpora.dictionary import Dictionary
 
 from utils import tokenize, print_err
-
+from year_mapping import year_mapping
 logger = logging.getLogger(__name__)
 
 
@@ -362,14 +362,33 @@ class TbmmCorpus(TextCorpus):
                                               format=format)
         return plot_values, counts, total_count, all_keywords
 
-    def plot_word_freqs_given_a_regexp_for_each_year(self, regexp_to_select_keywords, keyword="default", format="pdf"):
+    def plot_word_freqs_given_a_regexp_for_each_year(self, lo_regexp_to_select_keywords, keyword="default", format="pdf"):
+        fig = plt.figure(figsize=(16, 9), dpi=300)
+        for regexp_to_select_keywords in lo_regexp_to_select_keywords:
+            donem_dict_normalized, counts, total_count, all_keywords = self._word_freqs_given_a_regexp_for_each_year(regexp_to_select_keywords)
+            plot_values = donem_dict_normalized
+
+            plt.plot(plot_values.keys(), plot_values.values(),
+                     marker='+', markersize=3,
+                     linestyle="None")
+
+            #plt.xticks(range(0, len(plot_values), 100),
+            #           [plot_values[i][0].split("/")[1] for i in range(0, len(plot_values), 100)],
+            #           rotation='vertical')
+
+        plt.margins(0.2)
+        plt.subplots_adjust(bottom=0.15)
+        filename = os.path.join(self.config["plots_dir"], keyword+"_normalized")
+        fig.savefig(filename + "." + format)
+
+    def _word_freqs_given_a_regexp_for_each_year(self, regexp_to_select_keywords):
         """
 
         :param regexp_to_select_keywords: r"^(siki|sıkı)y(o|ö)net(i|ı)m"
         :return:
         """
         all_keywords = [(x, y) for x, y in self.dictionary.token2id.items() if
-         re.match(regexp_to_select_keywords, x)]
+                        re.match(regexp_to_select_keywords, x)]
 
         counts, total_count = self.query_word_count_across_all_documents([x[1] for x in all_keywords], threshold=1)
 
@@ -377,8 +396,8 @@ class TbmmCorpus(TextCorpus):
         # plot_values = sorted([(x, y) for x, y in counts.items() if re.match(r"^tbmm/", x)],
         #                      key=lambda x: x[0])
 
-        plot_values = [(x, y) for y, x in sorted([(y, x) for x, y in counts.items() if re.match(r"^(tbmm|tbt|mgk)/", x)],
-                                                 key=cmp_to_key(self.compare_two_document_labels))]
+        plot_values = [(x, y) for x, y in counts.items() if re.match(r"^(tbmm|tbt|mgk)/", x)]
+
 
         donem_dict = dd(int) ; donem_doc_count = dd(int) ; donem_dict_normalized = dd(int)
 
@@ -387,27 +406,9 @@ class TbmmCorpus(TextCorpus):
              donem_dict[term_str] += y
              donem_doc_count[term_str] +=1
 
-
         for term in donem_dict.keys():
-             donem_dict_normalized[term] = donem_dict[term] / donem_doc_count[term]
+             donem_dict_normalized[year_mapping[term]] = donem_dict[term] / donem_doc_count[term]
 
-        plot_values = donem_dict_normalized
-        #self.plot_single_values_for_documents(os.path.join(self.config["plots_dir"], keyword+"_normalized"),
-        #                                      plot_values,
-        #                                      format=format)
-        fig = plt.figure(figsize=(16, 9), dpi=300)
-
-        plt.plot(plot_values.keys(), plot_values.values(),
-                 marker='+', markersize=3,
-                 linestyle="None")
-
-        #plt.xticks(range(0, len(plot_values), 100),
-        #           [plot_values[i][0].split("/")[1] for i in range(0, len(plot_values), 100)],
-        #           rotation='vertical')
-        plt.margins(0.2)
-        plt.subplots_adjust(bottom=0.15)
-        filename = os.path.join(self.config["plots_dir"], keyword+"_normalized")
-        fig.savefig(filename + "." + format)
         return donem_dict_normalized, counts, total_count, all_keywords
 
     def _plot_single_values_for_documents(self, plot_values):
