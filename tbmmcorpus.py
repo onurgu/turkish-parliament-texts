@@ -364,22 +364,27 @@ class TbmmCorpus(TextCorpus):
 
     def plot_word_freqs_given_a_regexp_for_each_year(self, lo_regexp_to_select_keywords, keyword="default", format="pdf"):
         fig = plt.figure(figsize=(16, 9), dpi=300)
+        plt.gca().spines['top'].set_visible(False)
+        plt.gca().spines['right'].set_visible(False)
+        linestyles = ['-', '--', '-.', ':']
         for regexp_to_select_keywords in lo_regexp_to_select_keywords:
             donem_dict_normalized, counts, total_count, all_keywords = self._word_freqs_given_a_regexp_for_each_year(regexp_to_select_keywords)
             plot_values = donem_dict_normalized
-
-            plt.plot(plot_values.keys(), plot_values.values(),
-                     marker='+', markersize=3,
-                     linestyle="None")
+            plot_values = sorted(donem_dict_normalized.items(), key=lambda x: x[0])
+            linestyle = linestyles.pop()
+            plt.plot([x[0] for x in plot_values] , [x[1] for x in plot_values],
+                     #marker='+', markersize=3,
+                     linestyle=linestyle)
 
             #plt.xticks(range(0, len(plot_values), 100),
             #           [plot_values[i][0].split("/")[1] for i in range(0, len(plot_values), 100)],
             #           rotation='vertical')
 
-        plt.margins(0.2)
+        #plt.margins(0.2)
         plt.subplots_adjust(bottom=0.15)
         filename = os.path.join(self.config["plots_dir"], keyword+"_normalized")
         fig.savefig(filename + "." + format)
+        import ipdb ; ipdb.set_trace()
 
     def _word_freqs_given_a_regexp_for_each_year(self, regexp_to_select_keywords):
         """
@@ -387,6 +392,7 @@ class TbmmCorpus(TextCorpus):
         :param regexp_to_select_keywords: r"^(siki|sıkı)y(o|ö)net(i|ı)m"
         :return:
         """
+
         all_keywords = [(x, y) for x, y in self.dictionary.token2id.items() if
                         re.match(regexp_to_select_keywords, x)]
 
