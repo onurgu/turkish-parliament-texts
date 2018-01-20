@@ -23,11 +23,7 @@ if TOPIC_DISTRIBUTIONS:
     corpus.generate_word_counts()
 
     from gensim.models.ldamodel import LdaModel
-    lda = LdaModel.load("tbmm_lda.model.passes_100")
-
-    import matplotlib
-    matplotlib.use('Agg')  # Must be before importing matplotlib.pyplot or pylab!
-    import matplotlib.pyplot as plt
+    lda = LdaModel.load("corpus-v0.1/tbmm_lda.model")
 
     topic_dist_matrix, label_vector = corpus.calculate_topic_distributions_of_all_documents(lda)
 
