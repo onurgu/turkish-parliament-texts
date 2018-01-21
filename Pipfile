@@ -15,6 +15,9 @@ gensim = "*"
 nltk = "*"
 ipython = "*"
 matplotlib = "*"
+data-hacks = "*"
+seaborn = "*"
+jupyter = "*"
 
 
 [requires]

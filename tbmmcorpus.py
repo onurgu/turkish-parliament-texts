@@ -74,6 +74,8 @@ class TbmmCorpus(TextCorpus):
 
         self.config = config
 
+        self.date_mappings = {}
+
     @staticmethod
     def filter_extremes(dictionary_object, no_below=5, no_above=0.5, keep_n=100000, keep_tokens=None):
         """
@@ -253,6 +255,11 @@ class TbmmCorpus(TextCorpus):
 
         self.dictionary = self.dictionary.load_from_text(fname + ".vocabulary.txt")
 
+        import pickle
+        with open(fname + '.date_mappings.pkl', 'rb') as f:
+            self.date_mappings = pickle.load(f)
+
+
     @staticmethod
     def get_document_topics(corpus, lda, document):
         """
@@ -362,31 +369,35 @@ class TbmmCorpus(TextCorpus):
                                               format=format)
         return plot_values, counts, total_count, all_keywords
 
-    def plot_word_freqs_given_a_regexp_for_each_year(self, lo_regexp_to_select_keywords, keyword="default", format="pdf"):
+    def plot_word_freqs_given_a_regexp_for_each_year(self, lo_regexp_to_select_keywords, legend_labels, keyword="default", format="pdf"):
         fig = plt.figure(figsize=(16, 9), dpi=300)
         plt.gca().spines['top'].set_visible(False)
         plt.gca().spines['right'].set_visible(False)
         linestyles = ['-', '--', '-.', ':']
         legends = []
-        for regexp_to_select_keywords in lo_regexp_to_select_keywords:
+        handles = []
+        for idx, regexp_to_select_keywords in enumerate(lo_regexp_to_select_keywords):
             donem_dict_normalized, counts, total_count, all_keywords = self._word_freqs_given_a_regexp_for_each_year(regexp_to_select_keywords)
             plot_values = donem_dict_normalized
             plot_values = sorted(donem_dict_normalized.items(), key=lambda x: x[0])
             linestyle = linestyles.pop()
-            plt.plot([x[0] for x in plot_values] , [x[1] for x in plot_values],
-                     label=regexp_to_select_keywords,
-                     linestyle=linestyle)
+            line, = plt.plot([x[0] for x in plot_values], [x[1] for x in plot_values],
+                             label=legend_labels[idx],
+                             linestyle=linestyle)
+            handles += [line]
             legends.append(regexp_to_select_keywords)
 
             #plt.xticks(range(0, len(plot_values), 100),
             #           [plot_values[i][0].split("/")[1] for i in range(0, len(plot_values), 100)],
             #           rotation='vertical')
 
+        plt.legend(handles=handles)
+
         #plt.margins(0.2)
         plt.subplots_adjust(bottom=0.15)
         filename = os.path.join(self.config["plots_dir"], keyword+"_normalized")
         fig.savefig(filename + "." + format)
-        import ipdb ; ipdb.set_trace()
+        # import ipdb ; ipdb.set_trace()
 
     def _word_freqs_given_a_regexp_for_each_year(self, regexp_to_select_keywords):
         """
@@ -451,30 +462,91 @@ class TbmmCorpus(TextCorpus):
         n_topics = lda.num_topics
         topic_dist_matrix = []
         label_vector = []
-        for idx, (doc_id, document_bow) in enumerate(self.documents_word_counts.items()):
+
+        unsorted_filepaths = [(doc_id, x['filepath']) for doc_id, x in self.documents_metadata.items() if
+                              re.match(r"^(tbmm|tbt|mgk)/", x['filepath'])]
+
+        for idx, (doc_id, filepath) in enumerate(unsorted_filepaths):
+            document_bow = self.documents_word_counts[doc_id]
             topic_dist = lda.get_document_topics(document_bow)
             topic_dist_full_vector = [0] * n_topics
             for topic_id, prob in topic_dist:
                 topic_dist_full_vector[topic_id] = prob
             topic_dist_matrix += [topic_dist_full_vector]
-            label_vector += [self.documents_metadata[doc_id]['filepath']]
+            label_vector += [filepath]
 
         return topic_dist_matrix, label_vector
 
-    def plot_topic_by_year(self, topic_no, topic_dist_matrix, label_vector, format="pdf"):
-        import ipdb ; ipdb.set_trace()
-        sorted_zipped_topic_dist_matrix = sorted(zip(topic_dist_matrix, label_vector),
-                                                 key=cmp_to_key(self.compare_two_document_labels))
+    # def plot_topic_by_year(self, topic_no, topic_dist_matrix, label_vector, format="pdf"):
+    #     # import ipdb ; ipdb.set_trace()
+    #     fig = plt.figure()
+    #     sorted_zipped_topic_dist_matrix = sorted(zip(topic_dist_matrix, label_vector),
+    #                                              key=cmp_to_key(self.compare_two_document_labels))
+    #
+    #     tbmm_topic_dist_matrix = sorted_zipped_topic_dist_matrix
+    #
+    #     plot_values = [(value[1], value[0][topic_no]) for id, value in enumerate(tbmm_topic_dist_matrix)]
+    #
+    #     plt.plot([x[0] for x in plot_values] , [x[1] for x in plot_values], label="Topic %d" % topic_no)
+    #     plt.subplots_adjust(bottom=0.15)
+    #     filename = os.path.join(self.config["plots_dir"], "topic_%d" % topic_no)
+    #     fig.savefig(filename + "." + format)
 
-        tbmm_topic_dist_matrix = sorted_zipped_topic_dist_matrix
+    def plot_a_specific_topic_by_year(self, topics, topic_dist_matrix, label_vector, legend_labels, keyword="default_topic", format="pdf"):
+        fig = plt.figure(figsize=(16, 9), dpi=300)
+        plt.gca().spines['top'].set_visible(False)
+        plt.gca().spines['right'].set_visible(False)
+        linestyles = ['-', '--', '-.', ':']
+        markerstyles = ['+', '.', 'o', 'v', '^']
 
-        plot_values = [(value[1], value[0][topic_no]) for id, value in enumerate(tbmm_topic_dist_matrix)]
+        handles = []
+        for idx, topic_no in enumerate(topics):
 
-        plt.plot([x[0] for x in plot_values] , [x[1] for x in plot_values], label="Topic %d" % topic_no)
+            donem_dict_normalized = self._get_topic_normalized_for_each_year(topic_no,
+                                                                             topic_dist_matrix,
+                                                                             label_vector)
+
+            plot_values = sorted(donem_dict_normalized.items(), key=lambda x: x[0])
+            if idx < len(linestyles):
+                linestyle = linestyles[-(idx+1)]
+                markerstyle = ""
+            else:
+                linestyle = linestyles[0]
+                markerstyle = markerstyles[-(idx+1)]
+
+            line, = plt.plot([x[0] for x in plot_values], [x[1] for x in plot_values],
+                             label=legend_labels[idx],
+                             linestyle=linestyle,
+                             marker=markerstyle)
+            handles += [line]
+
+            #plt.xticks(range(0, len(plot_values), 100),
+            #           [plot_values[i][0].split("/")[1] for i in range(0, len(plot_values), 100)],
+            #           rotation='vertical')
+
+        plt.legend(handles=handles)
+
+        #plt.margins(0.2)
         plt.subplots_adjust(bottom=0.15)
-        filename = os.path.join(self.config["plots_dir"], "topic_%d" % topic_no)
+        filename = os.path.join(self.config["plots_dir"], keyword+"_normalized")
         fig.savefig(filename + "." + format)
+        # import ipdb ; ipdb.set_trace()
 
+    def _get_topic_normalized_for_each_year(self, topic_no, topic_dist_matrix, label_vector):
+
+        donem_dict = dd(int)
+        donem_doc_count = dd(int)
+        donem_dict_normalized = dd(int)
+
+        for idx, label in enumerate(label_vector):
+            term_str = label.split("/")[1]
+            donem_dict[term_str] += topic_dist_matrix[idx][topic_no]
+            donem_doc_count[term_str] += 1
+
+        for term in donem_dict.keys():
+             donem_dict_normalized[year_mapping[term]] = donem_dict[term] / donem_doc_count[term]
+
+        return donem_dict_normalized
 
     def plot_topic_across_time(self, topic_no, topic_dist_matrix, label_vector, format="pdf"):
 
@@ -555,6 +627,65 @@ class TbmmCorpus(TextCorpus):
 
         self.compare_two_document_labels = _compare_two_document_labels(coded_filepaths)
 
+    def calculate_intervals(self):
+
+        dates = {}
+        for k, v in self.date_mappings.items():
+            _key = int(v['interval'][0][-4:])
+            if _key in dates:
+                dates[_key].append(k)
+            else:
+                dates[_key] = [k]
+
+        for k, v in dates.items():
+            for i in range(len(v)):
+                if v[i].startswith('tbt-ty') and len(v[i]) == 7:
+                    v[i] = v[i][:6] + '0' + v[i][6:]
+
+        for k, v in dates.items():
+            for i in range(len(v)):
+                if v[i].startswith('cs-ty') and len(v[i]) == 6:
+                    v[i] = v[i][:5] + '0' + v[i][5:]
+
+        years = sorted(dates.keys())
+        change_points = [1923, 1938, 1946, 1960, 1980, 1991, 2002]
+
+        codes = {1923: []}
+        point = 0
+        for year in years:
+            if year < (change_points[point + 1] if point + 1 < len(change_points) else 5000):
+                codes[change_points[point]] += dates[year]
+            else:
+                point += 1
+                codes[change_points[point]] = []
+
+        metadata2id = {v['filepath']: k for k, v in self.documents_metadata.items()}
+
+        temp = {}
+        for k, v in metadata2id.items():
+            _key = k.split('/')[1]
+            if _key in temp:
+                temp[_key].append(v)
+            else:
+                temp[_key] = [v]
+        metadata2id = temp
+
+        merged_dates = {}
+        for date, arr in codes.items():
+            for code in arr:
+                if date in merged_dates:
+                    if code in metadata2id:
+                        merged_dates[date] += metadata2id[code]
+                    else:
+                        print('{} not exists in metadata!'.format(code))
+                else:
+                    if code in metadata2id:
+                        merged_dates[date] = metadata2id[code]
+                    else:
+                        print('{} not exists in metadata!'.format(code))
+
+        self.documents_date_groups = merged_dates
+
 
 def prepare_for_analysis():
     import configparser
@@ -586,6 +717,8 @@ def prepare_for_analysis():
         corpus.plot_topic_across_time(topic_no, topic_dist_matrix, label_vector)
 
     corpus.plot_word_freqs_given_a_regexp(r"^lokavt", keyword="lokavt")
+
+    corpus.plot_word_freqs_given_a_regexp(r"^mebus", keyword="mebus")
 
 
 

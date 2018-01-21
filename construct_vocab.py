@@ -168,7 +168,7 @@ if __name__ == "__main__":
 
             lda.print_topics(20)
 
-            lda.save("tbmm_lda.model")
+            lda.save(args.corpus_filename + ".tbmm_lda.model")
 
 
 
