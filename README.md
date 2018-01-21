@@ -25,6 +25,11 @@ Example code to save a figure:
     plot_values, counts, total_count, all_keywords = corpus_loader.corpus._word_freqs_given_a_regexp_for_each_year(r"^(milletvekil|vekil)", keyword="milletvekil",)
    
     
+## Jupyter Notebook
+
+You can use the `notebook.ipynb` file to load and query the corpus.
+
+![notebook image](notebook.png)
     
 ## Preprocessing
 
