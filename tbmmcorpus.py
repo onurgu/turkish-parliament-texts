@@ -16,7 +16,7 @@ from gensim.corpora.textcorpus import TextCorpus
 from gensim.corpora.dictionary import Dictionary
 
 from utils import tokenize, print_err
-from year_mapping import year_mapping
+from year_mapping import term2year, year2term
 logger = logging.getLogger(__name__)
 
 
@@ -75,6 +75,12 @@ class TbmmCorpus(TextCorpus):
         self.config = config
 
         self.date_mappings = {}
+
+        # Calculated if calculate_intervals called
+        self.documents_date_groups = None
+
+        # Calculated if calculate_stats called
+        self.stats = None
 
     @staticmethod
     def filter_extremes(dictionary_object, no_below=5, no_above=0.5, keep_n=100000, keep_tokens=None):
@@ -255,8 +261,19 @@ class TbmmCorpus(TextCorpus):
 
         self.dictionary = self.dictionary.load_from_text(fname + ".vocabulary.txt")
 
+        # Date mappings object has a complex structure
+        # it is a dictionary with Terms as keys and
+        # value is a dictionary which has keys as file url
+        # and value as their publish dates
+        # finally with one special item as shown below
+        #  'd18-y4': {
+        #    ...
+        #    'https://www.tbmm.gov.tr/tutanaklar/TUTANAK/TBMM/d18/c046/tbmm18046126.pdf': datetime.date(1990, 8, 2),
+        #    'https://www.tbmm.gov.tr/tutanaklar/TUTANAK/TBMM/d18/c046/tbmm18046127.pdf': datetime.date(1990, 8, 4),
+        #    'interval': [datetime.date(1989, 11, 5), datetime.date(1990, 8, 4)]
+        # }
         import pickle
-        with open(fname + '.date_mappings.pkl', 'rb') as f:
+        with open(fname + '.date_mappings_2.pkl', 'rb') as f:
             self.date_mappings = pickle.load(f)
 
 
@@ -426,7 +443,7 @@ class TbmmCorpus(TextCorpus):
              donem_doc_count[term_str] +=1
 
         for term in donem_dict.keys():
-             donem_dict_normalized[year_mapping[term]] = donem_dict[term] / donem_doc_count[term]
+             donem_dict_normalized[term2year[term]] = donem_dict[term] / donem_doc_count[term]
 
         return donem_dict_normalized, counts, total_count, all_keywords
 
@@ -544,7 +561,7 @@ class TbmmCorpus(TextCorpus):
             donem_doc_count[term_str] += 1
 
         for term in donem_dict.keys():
-             donem_dict_normalized[year_mapping[term]] = donem_dict[term] / donem_doc_count[term]
+             donem_dict_normalized[term2year[term]] = donem_dict[term] / donem_doc_count[term]
 
         return donem_dict_normalized
 
@@ -629,62 +646,131 @@ class TbmmCorpus(TextCorpus):
 
     def calculate_intervals(self):
 
-        dates = {}
-        for k, v in self.date_mappings.items():
-            _key = int(v['interval'][0][-4:])
-            if _key in dates:
-                dates[_key].append(k)
-            else:
-                dates[_key] = [k]
-
-        for k, v in dates.items():
-            for i in range(len(v)):
-                if v[i].startswith('tbt-ty') and len(v[i]) == 7:
-                    v[i] = v[i][:6] + '0' + v[i][6:]
-
-        for k, v in dates.items():
-            for i in range(len(v)):
-                if v[i].startswith('cs-ty') and len(v[i]) == 6:
-                    v[i] = v[i][:5] + '0' + v[i][5:]
-
-        years = sorted(dates.keys())
+        years = sorted(year2term.keys())
         change_points = [1923, 1938, 1946, 1960, 1980, 1991, 2002]
 
         codes = {1923: []}
         point = 0
         for year in years:
             if year < (change_points[point + 1] if point + 1 < len(change_points) else 5000):
-                codes[change_points[point]] += dates[year]
+                codes[change_points[point]] += year2term[year]
             else:
                 point += 1
                 codes[change_points[point]] = []
 
-        metadata2id = {v['filepath']: k for k, v in self.documents_metadata.items()}
-
-        temp = {}
-        for k, v in metadata2id.items():
-            _key = k.split('/')[1]
-            if _key in temp:
-                temp[_key].append(v)
+        term2id = {}
+        for _id, v in self.documents_metadata.items():
+            term = v['filepath'].split('/')[1]
+            if term in term2id:
+                term2id[term].append(_id)
             else:
-                temp[_key] = [v]
-        metadata2id = temp
+                term2id[term] = [_id]
 
         merged_dates = {}
         for date, arr in codes.items():
             for code in arr:
                 if date in merged_dates:
-                    if code in metadata2id:
-                        merged_dates[date] += metadata2id[code]
+                    if code in term2id:
+                        merged_dates[date] += term2id[code]
                     else:
                         print('{} not exists in metadata!'.format(code))
                 else:
-                    if code in metadata2id:
-                        merged_dates[date] = metadata2id[code]
+                    if code in term2id:
+                        merged_dates[date] = term2id[code]
                     else:
                         print('{} not exists in metadata!'.format(code))
 
         self.documents_date_groups = merged_dates
+
+    def calculate_stats(self):
+        self.stats = {
+            'unique_word_counts': {},
+            'document_word_counts': {},
+            'unique_word_counts_per_year': {},
+            'document_word_counts_per_year': {},
+            'days_a_year': {}
+        }
+
+        # Get bow values from self.documents_word_counts
+        # which has vocabulary as keys and
+        # word count as sum of their counts
+        for d_id, bow in self.documents_word_counts.items():
+            self.stats['unique_word_counts'][d_id] = len(bow)
+            self.stats['document_word_counts'][d_id] = sum([c for (w_id, c) in bow])
+
+        # Look load_tbmm_corpus for date_mapping structure
+        # r_date_mappings is the reduced version of date mappings
+        # it does not have 'interval' items
+        # it has file names as keys instead of HTTP location
+        r_date_mappings = {term: {addr.split('/')[-1][:-4]: _date
+                                  for addr, _date in dd.items() if addr != 'interval'}
+                           for term, dd in self.date_mappings.items()}
+
+
+        # Two different objects to navigate on
+
+        # doc2id_time is a dictionary with file names as keys and
+        # document_id, time(as Date object) tuple as values
+        doc2id_time = {}
+
+        # time2id_doc is a dictionary with time as keys and
+        # file name, document_id tuple as values
+        time2id_doc = {}
+        for _id, v in self.documents_metadata.items():
+            # Ex metadata item: (1, {'filepath': 'tbt/tbt-ty05/tbmm05005fih/'})
+            # key is document_id and
+            # value is a dictionary with 'filepath' item which has the value
+            # <Type of Doc?>/<Term>/<Document Name>
+            term, document_name = v['filepath'].split('/')[1:3]
+
+            # Curation of doc2id_time and time2id_doc
+            # it is possible to add term values or create different type of
+            # dictionaries to work on...
+            if term in r_date_mappings:
+                if document_name in r_date_mappings[term]:
+                    doc_t = r_date_mappings[term][document_name]
+
+                    id_time = (_id, doc_t)
+                    if document_name in doc2id_time:
+                        doc2id_time[document_name].append(id_time)
+                    else:
+                        doc2id_time[document_name] = [id_time]
+
+                    id_doc = (_id, document_name)
+                    if doc_t in time2id_doc:
+                        time2id_doc[doc_t].append(id_doc)
+                    else:
+                        time2id_doc[doc_t] = [id_doc]
+
+        # Similar to unique_word_counts and document_word_counts
+        # but by the help of time2id_doc, this part calculates
+        # days_a_year, unique_word_counts_per_year and document_word_counts_per_year
+        for document_date in sorted(list(time2id_doc)):
+            current_year = document_date.year
+
+            # days_a_year holds day count for a year that a publish happened
+            # and document count for a year
+            # {
+            #   ...
+            #   2013: {'day_count': 63, 'document_count': 93}
+            # }
+            # In 2013, there are 93 published documents in 63 days..
+            document_for_date = len(time2id_doc[document_date])
+            if current_year in self.stats['days_a_year']:
+                self.stats['days_a_year'][current_year]['day_count'] += 1
+                self.stats['days_a_year'][current_year]['document_count'] += document_for_date
+            else:
+                self.stats['days_a_year'][current_year] = {'day_count': 1, 'document_count': document_for_date}
+
+            for (d_id, doc) in time2id_doc[document_date]:
+                bow = self.documents_word_counts[d_id]
+
+                if current_year in self.stats['unique_word_counts_per_year']:
+                    self.stats['unique_word_counts_per_year'][current_year] += len(bow)
+                    self.stats['document_word_counts_per_year'][current_year] += sum([c for (w_id, c) in bow])
+                else:
+                    self.stats['unique_word_counts_per_year'][current_year] = len(bow)
+                    self.stats['document_word_counts_per_year'][current_year] = sum([c for (w_id, c) in bow])
 
 
 def prepare_for_analysis():

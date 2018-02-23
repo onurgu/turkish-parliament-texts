@@ -2,7 +2,7 @@ import configparser
 import tbmmcorpus
 
 DEV=False
-TOPIC_DISTRIBUTIONS=True
+TOPIC_DISTRIBUTIONS=False
 
 if DEV:
     corpus_filepath = "corpus-dev/tbmm_corpus"
