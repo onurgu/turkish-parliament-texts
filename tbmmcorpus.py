@@ -321,7 +321,8 @@ class TbmmCorpus(TextCorpus):
         else:
             target_word_ids = target_word_id_or_ids
 
-        total_count = 0
+        total_word_count_per_filepath = dd(int)
+        total_found_count = 0
         counts = dd(int)
 
         for idx, (doc_id, document_word_counts) in enumerate(self.documents_word_counts.items()):
@@ -331,6 +332,8 @@ class TbmmCorpus(TextCorpus):
             target_freq_for_this_document = \
                 TbmmCorpus.count_howmany_given_word_ids(document_word_counts, target_word_ids)
 
+
+
             if target_freq_for_this_document >= threshold:
                 # target_freq_for_this_document = target_freq_for_this_document[0]
 
@@ -339,7 +342,8 @@ class TbmmCorpus(TextCorpus):
                 # tokens = self.metadata2description[filepath]
 
                 counts[filepath] += target_freq_for_this_document
-                total_count += target_freq_for_this_document
+                total_word_count_per_filepath[filepath] += sum([freq for (word_id, freq) in document_word_counts])
+                total_found_count += target_freq_for_this_document
 
                 # main_type = tokens[0]
                 # second_type_and_term = tokens[1]
@@ -361,7 +365,7 @@ class TbmmCorpus(TextCorpus):
 
             if idx % 1000 == 0:
                 logger.info("%d documents scanned for word_id")
-        return counts, total_count
+        return counts, total_found_count, total_word_count_per_filepath
 
     def plot_word_freqs_given_a_regexp(self, regexp_to_select_keywords, keyword="default", format="pdf", threshold=1):
         """
@@ -372,7 +376,7 @@ class TbmmCorpus(TextCorpus):
         all_keywords = [(x, y) for x, y in self.dictionary.token2id.items() if
          re.match(regexp_to_select_keywords, x)]
 
-        counts, total_count = self.query_word_count_across_all_documents([x[1] for x in all_keywords], threshold=threshold)
+        counts, total_count, total_word_count_per_filepath = self.query_word_count_across_all_documents([x[1] for x in all_keywords], threshold=threshold)
 
         # # filter only tbmm documents for now
         # plot_values = sorted([(x, y) for x, y in counts.items() if re.match(r"^tbmm/", x)],
@@ -426,7 +430,7 @@ class TbmmCorpus(TextCorpus):
         all_keywords = [(x, y) for x, y in self.dictionary.token2id.items() if
                         re.match(regexp_to_select_keywords, x)]
 
-        counts, total_count = self.query_word_count_across_all_documents([x[1] for x in all_keywords], threshold=1)
+        counts, total_count, total_word_count_per_filepath = self.query_word_count_across_all_documents([x[1] for x in all_keywords], threshold=1)
 
         # # filter only tbmm documents for now
         # plot_values = sorted([(x, y) for x, y in counts.items() if re.match(r"^tbmm/", x)],
@@ -435,15 +439,21 @@ class TbmmCorpus(TextCorpus):
         plot_values = [(x, y) for x, y in counts.items() if re.match(r"^(tbmm|tbt|mgk)/", x)]
 
 
-        donem_dict = dd(int) ; donem_doc_count = dd(int) ; donem_dict_normalized = dd(int)
+        donem_target_count = dd(int)
+        donem_doc_count = dd(int)
+        donem_token_count = dd(int)
+        donem_dict_normalized = dd(int)
 
-        for x,y in plot_values:
-             term_str = x.split("/")[1]
-             donem_dict[term_str] += y
-             donem_doc_count[term_str] +=1
+        for filepath, freq in plot_values:
+            term_str = filepath.split("/")[1]
+            donem_target_count[term_str] += freq
+            donem_doc_count[term_str] += 1
+            donem_token_count[term_str] += total_word_count_per_filepath[filepath]
 
-        for term in donem_dict.keys():
-             donem_dict_normalized[term2year[term]] = donem_dict[term] / donem_doc_count[term]
+
+        for term in donem_target_count.keys():
+            # donem_dict_normalized[term2year[term]] = donem_target_count[term] / donem_doc_count[term]
+            donem_dict_normalized[term2year[term]] = donem_target_count[term] / donem_token_count[term]
 
         return donem_dict_normalized, counts, total_count, all_keywords
 
