@@ -19,7 +19,7 @@ Example code to save a figure:
     ipython
     import corpus_loader
     # plot distribution of "mebus" and "milletvekil" keywords
-    corpus_loader.corpus.plot_word_freqs_given_a_regexp_for_each_year([r"^mebus",r"^milletvekil"], keyword="milletvekil_and_mebus",)
+    corpus_loader.corpus.plot_word_freqs_given_a_regexp_for_each_year([r"^mebus",r"^milletvekil"], ["mebus", "milletvekili"], keyword="milletvekil_and_mebus",)
     
     # to see plotted values 
     plot_values, counts, total_count, all_keywords = corpus_loader.corpus._word_freqs_given_a_regexp_for_each_year(r"^(milletvekil|vekil)", keyword="milletvekil",)
