@@ -7,7 +7,7 @@ TOPIC_DISTRIBUTIONS=False
 if DEV:
     corpus_filepath = "corpus-dev/tbmm_corpus"
 else:
-    corpus_filepath = "corpus-v0.2/tbmm_corpus.mm"
+    corpus_filepath = "corpus-v0.3/tbmm_corpus"
 
 config_parser = configparser.ConfigParser()
 config_parser.read("config.ini")
