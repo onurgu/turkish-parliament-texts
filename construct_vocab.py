@@ -122,35 +122,35 @@ if __name__ == "__main__":
 
 
         # pruning
-        # good_ids, n_removed = TbmmCorpus.filter_extremes(corpus.dictionary,
-        #                                                  no_below=5, no_above=0.5, keep_n=2000000,
-        #                                                  keep_tokens=None)
-        #
-        # # do the actual filtering, then rebuild dictionary to remove gaps in ids
-        # TbmmCorpus.filter_tokens(corpus.dictionary, good_ids=good_ids, compact_ids=False)
-        #
-        # logger.info("construct_vocab: rebuilding dictionary, shrinking gaps")
-        #
-        # # build mapping from old id -> new id
-        # idmap = dict(zip(sorted(itervalues(corpus.dictionary.token2id)), range(len(corpus.dictionary.token2id))))
-        #
-        # # reassign mappings to new ids
-        # corpus.dictionary.token2id = {token: idmap[tokenid] for token, tokenid in iteritems(corpus.dictionary.token2id)}
-        # corpus.dictionary.id2token = {}
-        # corpus.dictionary.dfs = {idmap[tokenid]: freq for tokenid, freq in iteritems(corpus.dictionary.dfs)}
-        #
-        # if n_removed:
-        #     logger.info("Starting to remap word ids in tbmmcorpus documents hashmap")
-        #     # def check_and_replace(x):
-        #     #     if x in idmap:
-        #     #         return x
-        #     #     else:
-        #     #         return -1
-        #     for idx, (doc_id, document) in enumerate(corpus.documents.items()):
-        #         if idx % 1000 == 0:
-        #             logger.info("remapping: %d documents finished" % idx)
-        #         # corpus.documents[doc_id] = [check_and_replace(oldid) for oldid in document]
-        #         corpus.documents[doc_id] = [idmap[oldid] for oldid in document if oldid in idmap]
+        good_ids, n_removed = TbmmCorpus.filter_extremes(corpus.dictionary,
+                                                         no_below=5, no_above=0.5, keep_n=2000000,
+                                                         keep_tokens=None)
+
+        # do the actual filtering, then rebuild dictionary to remove gaps in ids
+        TbmmCorpus.filter_tokens(corpus.dictionary, good_ids=good_ids, compact_ids=False)
+
+        logger.info("construct_vocab: rebuilding dictionary, shrinking gaps")
+
+        # build mapping from old id -> new id
+        idmap = dict(zip(sorted(itervalues(corpus.dictionary.token2id)), range(len(corpus.dictionary.token2id))))
+
+        # reassign mappings to new ids
+        corpus.dictionary.token2id = {token: idmap[tokenid] for token, tokenid in iteritems(corpus.dictionary.token2id)}
+        corpus.dictionary.id2token = {}
+        corpus.dictionary.dfs = {idmap[tokenid]: freq for tokenid, freq in iteritems(corpus.dictionary.dfs)}
+
+        if n_removed:
+            logger.info("Starting to remap word ids in tbmmcorpus documents hashmap")
+            # def check_and_replace(x):
+            #     if x in idmap:
+            #         return x
+            #     else:
+            #         return -1
+            for idx, (doc_id, document) in enumerate(corpus.documents.items()):
+                if idx % 1000 == 0:
+                    logger.info("remapping: %d documents finished" % idx)
+                # corpus.documents[doc_id] = [check_and_replace(oldid) for oldid in document]
+                corpus.documents[doc_id] = [idmap[oldid] for oldid in document if oldid in idmap]
 
         corpus.save_tbmm_corpus(args.corpus_filename)
 

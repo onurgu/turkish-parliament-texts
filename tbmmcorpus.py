@@ -273,7 +273,7 @@ class TbmmCorpus(TextCorpus):
         #    'interval': [datetime.date(1989, 11, 5), datetime.date(1990, 8, 4)]
         # }
         import pickle
-        with open(fname + '.date_mappings_2.pkl', 'rb') as f:
+        with open(fname + '.date_mappings_3.pkl', 'rb') as f:
             self.date_mappings = pickle.load(f)
 
 
@@ -401,7 +401,7 @@ class TbmmCorpus(TextCorpus):
             donem_dict_normalized, counts, total_count, all_keywords = self._word_freqs_given_a_regexp_for_each_year(regexp_to_select_keywords)
             plot_values = donem_dict_normalized
             plot_values = sorted(donem_dict_normalized.items(), key=lambda x: x[0])
-            linestyle = linestyles.pop()
+            linestyle = linestyles[idx % len(linestyles)]
             line, = plt.plot([x[0] for x in plot_values], [x[1] for x in plot_values],
                              label=legend_labels[idx],
                              linestyle=linestyle)
@@ -646,7 +646,7 @@ class TbmmCorpus(TextCorpus):
                 code = 2
             elif re.match(r"^mgk/", filepath):
                 code = 3
-            elif re.match(r"^tbmm/d(17|18|19|20|21|22|23|24)", filepath):
+            elif re.match(r"^tbmm/d(17|18|19|20|21|22|23|24|25)", filepath):
                 code = 4
             else:
                 code = 0
