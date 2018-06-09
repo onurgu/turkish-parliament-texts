@@ -1,17 +1,14 @@
 import argparse
-
+import configparser
 import glob
 import logging
 import sys
 
-import configparser
 config_parser = configparser.ConfigParser()
 config_parser.read("config.ini")
 config = config_parser['default']
 
-from utils import tokenize, print_err, turkish_lower
-
-from six import itervalues, iteritems
+from corpus_compiler.utils import tokenize, print_err, turkish_lower
 
 from gensim import corpora
 
@@ -32,7 +29,7 @@ def combine_files_in_the_pdf_directory(filepath):
     document = []
     for page_filepath in sorted_pagefilepaths:
         with open(page_filepath, "r") as f:
-            document += [turkish_lower(x) for x in tokenize(" ".join(f.readlines()))]
+            document += [x for x in tokenize(" ".join(f.readlines()))]
 
     return document
 
@@ -102,18 +99,18 @@ if __name__ == "__main__":
         # 1) does adding to the corpus require preprocessing? I think so. TextCorpus is suitable for these
         # operations
 
-        from tbmmcorpus import TbmmCorpus
+        from corpus_compiler.tbmmcorpus import TbmmCorpus
 
-        from gensim.corpora.mmcorpus import MmCorpus
-
-        corpus = TbmmCorpus(metadata=True, config=config)
+        corpus = TbmmCorpus(metadata=True, config=config,
+                            inmemory=False, corpus_filename=args.corpus_filename)
 
         for idx, filepath in enumerate(glob.iglob(config["data_dir"] + '/**/', recursive=True)):
-            # print(idx)
+
             if args.max_documents != 0 and idx == args.max_documents:
                 print_err("Stopping as we hit the max documents limit: %d" % args.max_documents)
                 break
             if check_if_pdf_directory(filepath.replace(config["data_dir"], "")):
+                print(idx, filepath)
                 document = combine_files_in_the_pdf_directory(filepath)
                 metadata_filepath = filepath.replace(config["data_dir"], "")
                 corpus.add_document(document, metadata_filepath)
@@ -121,36 +118,36 @@ if __name__ == "__main__":
                 continue
 
 
-        # pruning
-        good_ids, n_removed = TbmmCorpus.filter_extremes(corpus.dictionary,
-                                                         no_below=5, no_above=0.5, keep_n=2000000,
-                                                         keep_tokens=None)
-
-        # do the actual filtering, then rebuild dictionary to remove gaps in ids
-        TbmmCorpus.filter_tokens(corpus.dictionary, good_ids=good_ids, compact_ids=False)
-
-        logger.info("construct_vocab: rebuilding dictionary, shrinking gaps")
-
-        # build mapping from old id -> new id
-        idmap = dict(zip(sorted(itervalues(corpus.dictionary.token2id)), range(len(corpus.dictionary.token2id))))
-
-        # reassign mappings to new ids
-        corpus.dictionary.token2id = {token: idmap[tokenid] for token, tokenid in iteritems(corpus.dictionary.token2id)}
-        corpus.dictionary.id2token = {}
-        corpus.dictionary.dfs = {idmap[tokenid]: freq for tokenid, freq in iteritems(corpus.dictionary.dfs)}
-
-        if n_removed:
-            logger.info("Starting to remap word ids in tbmmcorpus documents hashmap")
-            # def check_and_replace(x):
-            #     if x in idmap:
-            #         return x
-            #     else:
-            #         return -1
-            for idx, (doc_id, document) in enumerate(corpus.documents.items()):
-                if idx % 1000 == 0:
-                    logger.info("remapping: %d documents finished" % idx)
-                # corpus.documents[doc_id] = [check_and_replace(oldid) for oldid in document]
-                corpus.documents[doc_id] = [idmap[oldid] for oldid in document if oldid in idmap]
+        # # pruning
+        # good_ids, n_removed = TbmmCorpus.filter_extremes(corpus.dictionary,
+        #                                                  no_below=5, no_above=0.5, keep_n=2000000,
+        #                                                  keep_tokens=None)
+        #
+        # # do the actual filtering, then rebuild dictionary to remove gaps in ids
+        # TbmmCorpus.filter_tokens(corpus.dictionary, good_ids=good_ids, compact_ids=False)
+        #
+        # logger.info("construct_vocab: rebuilding dictionary, shrinking gaps")
+        #
+        # # build mapping from old id -> new id
+        # idmap = dict(zip(sorted(itervalues(corpus.dictionary.token2id)), range(len(corpus.dictionary.token2id))))
+        #
+        # # reassign mappings to new ids
+        # corpus.dictionary.token2id = {token: idmap[tokenid] for token, tokenid in iteritems(corpus.dictionary.token2id)}
+        # corpus.dictionary.id2token = {}
+        # corpus.dictionary.dfs = {idmap[tokenid]: freq for tokenid, freq in iteritems(corpus.dictionary.dfs)}
+        #
+        # if n_removed:
+        #     logger.info("Starting to remap word ids in tbmmcorpus documents hashmap")
+        #     # def check_and_replace(x):
+        #     #     if x in idmap:
+        #     #         return x
+        #     #     else:
+        #     #         return -1
+        #     for idx, (doc_id, document) in enumerate(corpus.documents.items()):
+        #         if idx % 1000 == 0:
+        #             logger.info("remapping: %d documents finished" % idx)
+        #         # corpus.documents[doc_id] = [check_and_replace(oldid) for oldid in document]
+        #         corpus.documents[doc_id] = [idmap[oldid] for oldid in document if oldid in idmap]
 
         corpus.save_tbmm_corpus(args.corpus_filename)
 
@@ -164,7 +161,7 @@ if __name__ == "__main__":
             lda = LdaMulticore(workers=19, corpus=corpus, id2word=corpus.dictionary,
                                num_topics=20,
                                eval_every=100,
-                               chunksize=100, passes=10)
+                               chunksize=100, passes=5)
 
             lda.print_topics(20)
 

@@ -1,22 +1,21 @@
-import codecs
-from collections import defaultdict as dd
-from functools import cmp_to_key
-
 import logging
+from collections import defaultdict as dd
+
+import codecs
+import matplotlib
 import os
 import re
-
+from functools import cmp_to_key
 from six import itervalues, iteritems
 
-import matplotlib
 matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 
 from gensim.corpora.textcorpus import TextCorpus
 from gensim.corpora.dictionary import Dictionary
 
-from utils import tokenize, print_err
-from year_mapping import term2year, year2term
+from corpus_compiler.utils import tokenize, print_err
+from corpus_compiler.year_mapping import term2year, year2term
 logger = logging.getLogger(__name__)
 
 
@@ -60,11 +59,18 @@ class TbmmCorpus(TextCorpus):
 
     def __init__(self, input=None, dictionary=None, metadata=False, character_filters=None,
                  tokenizer=None, token_filters=None,
-                 config=None):
+                 config=None,
+                 inmemory=True,
+                 corpus_filename=None):
         super().__init__(input, dictionary, metadata, character_filters, tokenizer, token_filters)
+
+        self.inmemory = inmemory
+        self.corpus_filename = corpus_filename
 
         self.documents = {}
         self.documents_metadata = {}
+
+        self.document_line_address = {}
 
         self.metadata2description = {}
 
@@ -199,19 +205,42 @@ class TbmmCorpus(TextCorpus):
         return tokenize(text)
 
     def get_texts(self):
-        if self.metadata:
+
+        if self.inmemory:
             for idx, (documentno, document_text_in_ids) in enumerate(self.documents.items()):
                 if idx % 1000 == 0:
                     print_err("get_texts:", documentno)
                 document_text = [self.dictionary[id] for id in document_text_in_ids]
-                yield self.preprocess_text(" ".join(document_text)), \
-                      (documentno, self.documents_metadata[documentno])
+
+                if self.metadata:
+                        yield self.preprocess_text(" ".join(document_text)), \
+                              (documentno, self.documents_metadata[documentno], document_text_in_ids)
+                else:
+                        yield self.preprocess_text(" ".join(document_text))
         else:
-            for idx, (documentno, document_text_in_ids) in enumerate(self.documents.items()):
-                if idx % 1000 == 0:
-                    print_err("get_texts:", documentno)
-                document_text = [self.dictionary[id] for id in document_text_in_ids]
-                yield self.preprocess_text(" ".join(document_text))
+            with codecs.open(self.corpus_filename, 'r', encoding='utf-8') as f:
+                line_idx = 0
+                line = f.readline()
+                while line:
+                    tokens = line.strip().split(" ")
+                    metadata = {}
+                    doc_id = int(tokens[0])
+                    metadata['filepath'] = tokens[1]
+                    document_text_in_ids = [int(t) for t in tokens[2:]]
+
+                    document_text = [self.dictionary[id] for id in document_text_in_ids]
+
+                    if self.metadata:
+                        yield self.preprocess_text(" ".join(document_text)), \
+                              (doc_id, self.documents_metadata[doc_id], document_text_in_ids)
+                    else:
+                        yield self.preprocess_text(" ".join(document_text))
+
+                    line_idx += 1
+                    if line_idx % 100 == 0:
+                        logger.info("iterating %d documents" % line_idx)
+
+                    line = f.readline()
 
     def __len__(self):
         return len(self.documents)
@@ -239,7 +268,9 @@ class TbmmCorpus(TextCorpus):
         self.dictionary.save(fname + ".vocabulary")
         self.dictionary.save_as_text(fname + ".vocabulary.txt")
 
-    def load_tbmm_corpus(self, fname):
+    def load_tbmm_corpus(self, fname, inmemory=True):
+        self.inmemory = inmemory
+        self.corpus_filename = fname
         with codecs.open(fname, 'r', encoding='utf-8') as f:
             line_idx = 0
             line = f.readline()
@@ -250,7 +281,11 @@ class TbmmCorpus(TextCorpus):
                 metadata['filepath'] = tokens[1]
                 document = [int(t) for t in tokens[2:]]
 
-                self.documents[doc_id] = document
+                if inmemory:
+                    self.documents[doc_id] = document
+                else:
+                    self.document_line_address[doc_id] = line_idx
+
                 self.documents_metadata[doc_id] = metadata
 
                 line_idx += 1
@@ -273,7 +308,7 @@ class TbmmCorpus(TextCorpus):
         #    'interval': [datetime.date(1989, 11, 5), datetime.date(1990, 8, 4)]
         # }
         import pickle
-        with open(fname + '.date_mappings_3.pkl', 'rb') as f:
+        with open('./data/date_mappings.pkl', 'rb') as f:
             self.date_mappings = pickle.load(f)
 
 
@@ -308,11 +343,21 @@ class TbmmCorpus(TextCorpus):
 
     def generate_word_counts(self):
 
-        for idx, (doc_id, document) in enumerate(self.documents.items()):
-            self.documents_word_counts[doc_id] = TbmmCorpus.doc2bow_from_word_ids(document)
 
-            if idx % 1000 == 0:
-                logger.info("word_counts: %d documents" % idx)
+        if self.inmemory:
+            for idx, (doc_id, document) in enumerate(self.documents.items()):
+                self.documents_word_counts[doc_id] = TbmmCorpus.doc2bow_from_word_ids(document)
+
+                if idx % 1000 == 0:
+                    logger.info("word_counts: %d documents" % idx)
+        else:
+            if self.metadata:
+                for idx, (text, (doc_id, metadata, document_text_in_ids)) in enumerate(self.get_texts()):
+                    self.documents_word_counts[doc_id] = TbmmCorpus.doc2bow_from_word_ids(document_text_in_ids)
+
+                    if idx % 1000 == 0:
+                        logger.info("word_counts: %d documents" % idx)
+
 
     def query_word_count_across_all_documents(self, target_word_id_or_ids, threshold=1):
 
@@ -790,7 +835,7 @@ def prepare_for_analysis():
     config_parser.read("config.ini")
     config = config_parser['default']
 
-    from tbmmcorpus import TbmmCorpus
+    from corpus_compiler.tbmmcorpus import TbmmCorpus
 
     corpus = TbmmCorpus(metadata=True, config=config)
 
@@ -805,7 +850,6 @@ def prepare_for_analysis():
 
     import matplotlib
     matplotlib.use('Agg')  # Must be before importing matplotlib.pyplot or pylab!
-    import matplotlib.pyplot as plt
 
     topic_dist_matrix, label_vector = corpus.calculate_topic_distributions_of_all_documents(lda)
 
@@ -827,7 +871,7 @@ if __name__ == "__main__":
     config_parser.read("config.ini")
     config = config_parser['default']
 
-    from tbmmcorpus import TbmmCorpus
+    from corpus_compiler.tbmmcorpus import TbmmCorpus
 
     corpus = TbmmCorpus(metadata=True, config=config)
 

@@ -1,10 +1,9 @@
 import argparse
-import codecs
-import os
 import sys
 
+import os
 
-from rules import rules
+from corpus_compiler.rules import rules
 
 output_extension = "."
 
@@ -55,7 +54,7 @@ if __name__ == "__main__":
     #parser.add_argument('--sum', dest='accumulate', action='store_const',
     #    const=sum, default=max,help='sum the integers (default: find the max)')
     parser.add_argument("--command",
-                        choices=["clean_directories", "clean_stdin"],
+                        choices=["clean_directories", "clean_file", "clean_stdin"],
                         default="clean_directories")
     parser.add_argument("--filename", default="",
                         help="the filename to extract term_name")
@@ -68,6 +67,12 @@ if __name__ == "__main__":
 
     if args.command == "clean_directories":
         main(args.datafolder, args.output_folder)
+    elif args.command == "clean_file":
+        with open(args.filename, "r") as f:
+            text = " ".join(f.readlines())
+            filename, term_name = extract_term_name(args.filename)
+            cleaned_text = apply_rules(filename, term_name, str(text))
+            print(cleaned_text)
     else:
         text = " ".join(sys.stdin.readlines()) # WARN: it was "" before, " " is better because it
                                                # does not incorrectly concatenate words.

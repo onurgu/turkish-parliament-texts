@@ -20,7 +20,7 @@ def never_condition(term_name,filename):
 
 rules = [
     # ("R1", lambda text: re.sub("\xad\n","",text) , lambda term_name, filename : True),
-    ("R1", lambda text: re.sub("\xad\n","",text) , no_condition), # same as above line
+    ("R1", lambda text: re.sub("\xad\n ?","",text) , no_condition), # same as above line
     # ("R3", lambda text: re.sub("\n"," ",text) , lambda term_name,filename : False),
     ("R2", lambda text: re.sub("\n"," ",text) , never_condition),  # same as above line
 ]
