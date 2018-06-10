@@ -1,7 +1,23 @@
 # A Corpus of Grand National Assembly of Turkish Parliament's Transcripts
 
-This repository contains the source code to create the corpus of transcriptions of 
-Turkish parliament's general assembly.
+==== Scroll down for English.
+
+
+Bu repoda TBMM'nin 1920 ve 2015 arasındaki genel kurul tutanaklarının dijitalleştirilmiş hallerinin bir derlemini bulabilirsiniz.
+
+Sunduğumuz kodlar kullanılarak bazı sorgular yapıp derlemi analiz edebilirsiniz. Bunun örneklerine LREC 2018 kapsamında gerçekleştirilen ParlaCLARIN çalıştayında sunduğumuz [makaleden](http://lrec-conf.org/workshops/lrec2018/W2/summaries/19_W2.html) ulaşılabilir.
+
+Eğer katkıda bulunmak isterseniz, [Onur Güngör](onurgu@boun.edu.tr) ile iletişime geçin.
+
+==== English
+
+This is a compilation of the transcripts of Grand National Assembly of Turkish Parliament (TBMM) meetings which span nearly a century between 1920 and 2015.
+
+One can use supplied software to query and analyze the content. See [this paper](http://lrec-conf.org/workshops/lrec2018/W2/summaries/19_W2.html) from ParlaCLARIN Workshop at LREC 2018 for sample analyses on the corpus.
+
+If you want to contribute, please contact [Onur Güngör](onurgu@boun.edu.tr).
+
+
 
 We also provide the most recent version of the corpus at 
 [Releases](https://github.com/onurgu/turkish-parliament-texts/releases) section.
