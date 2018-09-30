@@ -1,8 +1,8 @@
 import logging
-import os, glob
+import os
+import re
 from subprocess import Popen, PIPE
 
-import codecs
 
 def parse_oturum_dosyasi(oturum_html_str):
     from bs4 import BeautifulSoup
@@ -10,7 +10,7 @@ def parse_oturum_dosyasi(oturum_html_str):
 
     paragraphs = soup.find_all("p", attrs={"class": "GENELKURUL"})
 
-    return [p.text for p in paragraphs]
+    return [re.sub(r"\s+", " ", p.text.replace("\n", " ").strip()) for p in paragraphs if p.text.strip]
 
 
 def main():
@@ -86,4 +86,4 @@ if __name__ == "__main__":
         assert args.input_file, "You should supply input_file argument with this command"
         with open(args.input_file, "r", encoding="utf-8") as f:
             paragraphs = parse_oturum_dosyasi("\n".join(f.readlines()))
-            print(paragraphs)
+            print("\n".join(paragraphs))
