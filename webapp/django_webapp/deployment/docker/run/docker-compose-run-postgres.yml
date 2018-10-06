@@ -1,0 +1,9 @@
+version: '2'
+
+services:
+    django_parliament_postgres_c:
+        container_name: django_parliament_postgres_c
+        image: django_parliament_postgres_i
+        volumes:
+            - ../../../resources/volumes/postgres_main:/var/lib/postgresql/9.5/main
+

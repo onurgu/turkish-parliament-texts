@@ -1,0 +1,14 @@
+# Read config.yml file
+# import yaml
+# config = yaml.safe_load(open("path/config.yml"))
+#
+# Access data
+# config["xvar"]
+######################
+xlist:
+    - val1
+    - val2
+xvar: val3
+xdict:
+    key1: val4
+    key2: val5

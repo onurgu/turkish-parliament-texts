@@ -1,0 +1,4 @@
+jquery#3.3.1
+underscore#1.8.3
+bootstrap#4.0.0
+bootstrap-toggle#2.2.2

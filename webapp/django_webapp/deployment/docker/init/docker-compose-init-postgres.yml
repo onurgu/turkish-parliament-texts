@@ -1,0 +1,12 @@
+version: '2'
+
+services:
+    django_parliament_postgres_c:
+        container_name: django_parliament_postgres_c
+        image: django_parliament_init_postgres_i
+        volumes:
+            - django_parliament_postgresql-volume:/var/lib/postgresql/9.5/main
+
+volumes:
+    django_parliament_postgresql-volume:
+        external: true

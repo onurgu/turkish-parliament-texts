@@ -1,0 +1,35 @@
+
+<link href="/static/bower_components/bootstrap/docs/4.0/examples/jumbotron/jumbotron.css" rel="stylesheet">
+<div class="container-fluid">
+  <nav class="navbar navbar-expand-md navbar-dark fixed-top bg-dark" style="margin-left:-15px; margin-right:-15px;">
+      <div class="navbar-header">
+        <a  style="color:#ffffff; font-weight:bold;" class="navbar-brand" href="/">django_parliament</a>
+      </div>
+
+      <div class="navbar-collapse collapse">
+        <ul class="nav navbar-nav navbar-left">
+            {% if user.is_authenticated %}
+              <li class="nav-item"><a class="nav-link"  style="color:#ffffff; " href="/app">Home</a></li>
+              <li class="nav-item"><a class="nav-link"  style="color:#ffffff; " href="/app/page1">Page1</a></li>
+            {% endif %}
+        </ul>
+        <ul class="nav navbar-nav ml-auto">
+            {% if user.is_authenticated %}
+              <li class="nav-item dropdown">
+                <button class="btn btn-info dropdown-toggle" style="margin-top:7px; margin-right:7px;" type="button" id="dropdownMenu1" data-toggle="dropdown" aria-haspopup="true" aria-expanded="true">
+                  {{user.username}} <span class="caret"></span>
+                </button>
+
+                <ul class="dropdown-menu dropdown-menu-right" aria-labelledby="dropdownMenu1">
+                  <li><a class="dropdown-item" href="/accounts/password/change">Change Password</a></li>
+                  <li><a class="dropdown-item" href="/accounts/logout/">Logout</a></li>
+                </ul>
+
+              </li>
+            {% else %}
+
+            {% endif %}
+        </ul>
+      </div>
+  </nav>
+</div>

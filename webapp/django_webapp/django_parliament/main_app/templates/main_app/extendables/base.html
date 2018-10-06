@@ -1,0 +1,20 @@
+{% load static %}
+
+<!DOCTYPE html>
+<html>
+
+  <head>
+    {% include "main_app/includables/head/head-base.html" %}
+    {% include "main_app/includables/head/head-pkg.html" %}
+    {% include "main_app/includables/head/head-js.html" %}
+    {% include "main_app/includables/head/head-css.html" %}
+  </head>
+
+
+  <body>
+    {% block navbar %}{% endblock %}
+    {% block content %}{% endblock %}
+  </body>
+
+
+</html>

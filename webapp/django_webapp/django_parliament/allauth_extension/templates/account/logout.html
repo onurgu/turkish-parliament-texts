@@ -1,0 +1,21 @@
+{% extends "main_app/extendables/base.html" %}
+
+{% block navbar %}
+     {% include "main_app/includables/navbar/navbar-version1.html" %}
+{% endblock %}
+
+{% block content %}
+
+    <div class="row">
+      <div class="col-md-4 offset-4 text-center">
+        <h1 class="text-center">Sign Out</h1>
+
+        <p>Are you sure you want to sign out?</p>
+
+        <form method="post" action="{% url 'account_logout' %}">
+          {% csrf_token %}
+          <button type="submit">Sign Out</button>
+        </form>
+      </div>
+    </div>
+{% endblock %}

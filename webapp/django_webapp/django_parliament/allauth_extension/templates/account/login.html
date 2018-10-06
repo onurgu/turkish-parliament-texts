@@ -1,0 +1,27 @@
+{% extends "main_app/extendables/base.html" %}
+
+{% block navbar %}
+     {% include "main_app/includables/navbar/navbar-version1.html" %}
+{% endblock %}
+
+{% block content %}
+  <script src="/static/account/js/login.js"></script>
+  <link href="/static/account/css/login.css" rel="stylesheet"/>
+
+  <div class="block-content-login">
+      <div class="container-fluid" >
+        <h1 class="text-center">Login</h1>
+
+        <form class="form-signin" method="POST" action="{% url 'account_login' %}">
+          {% csrf_token %}
+
+          <div class="to-be-formed">
+            {{ form.as_p }}
+          </div>
+          <button class="primaryAction btn btn-lg btn-primary btn-block" type="submit">Login</button>
+        </form>
+
+      </div>
+  </div>
+
+{% endblock %}

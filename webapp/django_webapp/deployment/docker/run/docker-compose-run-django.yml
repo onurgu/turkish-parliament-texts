@@ -1,0 +1,12 @@
+version: '2'
+
+services:
+    django_parliament_django_c:
+        container_name: django_parliament_django_c
+        image: django_parliament_django_i
+        ports:
+            - 8000:8000
+        volumes:
+            - ../../../resources/volumes/migrations:/usr/src/app/djangoproject/project/django_parliament/mappings/migrations
+            - ../../../django_parliament/main_app:/usr/src/app/djangoproject/project/django_parliament/main_app
+            - ../../../django_parliament/allauth_extension:/usr/src/app/djangoproject/project/django_parliament/allauth_extension

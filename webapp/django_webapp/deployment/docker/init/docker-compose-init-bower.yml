@@ -1,0 +1,13 @@
+version: '2'
+
+services:
+    django_parliament_bower_c:
+        container_name: django_parliament_bower_c
+        image: django_parliament_init_bower_i
+        volumes:
+            - django_parliament_bower-volume:/bower_components
+
+
+volumes:
+    django_parliament_bower-volume:
+        external: true

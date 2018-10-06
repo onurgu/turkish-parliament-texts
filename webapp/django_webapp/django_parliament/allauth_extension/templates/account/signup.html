@@ -1,0 +1,22 @@
+{% extends "main_app/extendables/base.html" %}
+
+{% block navbar %}
+     {% include "main_app/includables/navbar/navbar-version1.html" %}
+{% endblock %}
+
+
+{% block head_title %Signup{% endblock %}
+
+{% block content %}
+
+  <link href="/static/css/signin.css" rel="stylesheet"/>
+  <h1 class="text-center">System is not open to the public use.</h1>
+
+  <script type="text/javascript">
+    $(function(){
+      $("body").css("padding-top","0px");
+    });
+  </script>
+
+
+{% endblock content%}

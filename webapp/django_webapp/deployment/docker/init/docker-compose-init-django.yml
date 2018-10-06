@@ -1,0 +1,13 @@
+version: '2'
+
+services:
+    django_parliament_django_c:
+        container_name: django_parliament_django_c
+        image: django_parliament_init_django_i
+        volumes:
+            - django_parliament_migrations-volume:/usr/src/app/djangoproject/project/django_parliament/mappings/migrations
+
+
+volumes:
+    django_parliament_migrations-volume:
+        external: true
