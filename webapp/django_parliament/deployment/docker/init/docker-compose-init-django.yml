@@ -5,7 +5,7 @@ services:
         container_name: django_parliament_django_c
         image: django_parliament_init_django_i
         volumes:
-            - django_parliament_migrations-volume:/usr/src/app/djangoproject/project/django_parliament/mappings/migrations
+            - django_parliament_migrations-volume:/usr/src/app/djangoproject/django_parliament/mappings/migrations
 
 
 volumes:

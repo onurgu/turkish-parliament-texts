@@ -7,6 +7,6 @@ services:
         ports:
             - 8000:8000
         volumes:
-            - ../../../resources/volumes/migrations:/usr/src/app/djangoproject/project/django_parliament/mappings/migrations
-            - ../../../django_parliament/main_app:/usr/src/app/djangoproject/project/django_parliament/main_app
-            - ../../../django_parliament/allauth_extension:/usr/src/app/djangoproject/project/django_parliament/allauth_extension
+            - ../../../resources/volumes/migrations:/usr/src/app/djangoproject/django_parliament/mappings/migrations
+            - ../../../django_parliament/main_app:/usr/src/app/djangoproject/django_parliament/main_app
+            - ../../../django_parliament/allauth_extension:/usr/src/app/djangoproject/django_parliament/allauth_extension
