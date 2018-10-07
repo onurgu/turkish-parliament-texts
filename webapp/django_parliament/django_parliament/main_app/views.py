@@ -9,12 +9,12 @@ from django.contrib.auth.decorators import login_required
 
 # VIEWS
 
-@login_required
+@login_required(login_url='/tbmm-derlem/accounts/login/')
 def index(request):
     return render(request,"main_app/pages/home.html",{})
     # return HttpResponse("Hello, world. You're at the polls index.")
 
-@login_required
+@login_required(login_url='/tbmm-derlem/accounts/login/')
 def page1(request):
     return render(request, "main_app/pages/page1.html", {})
 

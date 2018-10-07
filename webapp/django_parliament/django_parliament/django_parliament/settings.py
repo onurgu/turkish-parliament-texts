@@ -70,8 +70,8 @@ AUTHENTICATION_BACKENDS = (
         'allauth.account.auth_backends.AuthenticationBackend',
 )
 
-LOGIN_REDIRECT_URL = '/'
-ACCOUNT_LOGOUT_REDIRECT_URL = '/'
+LOGIN_REDIRECT_URL = '/tbmm-derlem/'
+ACCOUNT_LOGOUT_REDIRECT_URL = '/tbmm-derlem/'
 
 TEMPLATES = [
     {

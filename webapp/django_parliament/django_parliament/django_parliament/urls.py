@@ -18,8 +18,9 @@ from django.urls import include, path
 from django.views.generic.base import RedirectView
 
 urlpatterns = [
-    path('admin/', admin.site.urls),
-    path('accounts/', include('allauth_extension.urls')),
-    path('app/', include('main_app.urls')),
-    path('', RedirectView.as_view(url='app/'))
+    path('tbmm-derlem/admin/', admin.site.urls),
+    path('tbmm-derlem/accounts/', include('allauth_extension.urls')),
+    path('tbmm-derlem/app/', include('main_app.urls')),
+    path('tbmm-derlem/', RedirectView.as_view(url='app/'))
 ]
+
