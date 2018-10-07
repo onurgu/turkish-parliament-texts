@@ -1,0 +1,5 @@
+webapp/**/*.pyc
+webapp/**/__pycache__/
+webapp/**/migrations/
+webapp/**/.idea/
+webapp/**/volumes/
