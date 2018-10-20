@@ -57,6 +57,27 @@ bash ./setup/docker/2_postgres.sh
 bash ./setup/docker/3_django.sh
 ```
 
+#### Explanation
+
+0_bower.sh : Bu bir container yaratip bower ile js library'lerini indirip, resources/volumes/bower_components'in icine docker volume ile map ediyor.
+
+1_volume.sh : Bu bir postgres user'i yaratiyor django baglanabilsin diye. Django icin gerekli database tablolarini yaratip migration'lari yaratiyor ve postgres'e ekliyor. Django'da admin:admin diye bir superuser olusturuyor. Ve bu postgres datasi volume'unu resources/volumes/postgres_main dizinine, django migrationlarini da resources/volumes/migrations dizinine map ediyor.
+
+2_postgres.sh : resources/volumes/postgres_main dizini ile docker volume baglantisi olusturup, postgres'i ayaga kaldiriyor. volume mapping'den dolayi postgres user ve django tablolari hazir zaten.
+
+3_django.sh : Bu da javascript dosyalarini django'nun anlayacagi bir dizine tasiyor.
+migrationlar icin bir docker volume baglantisi olusturuyor; bu sayede daha sonra bunlari ve postgres docker volume'unu baska bir bilgisayara aktarip ayni kurulum yapilabilir.
+django kodlari ile docker volume baglantisi olusturuyor. bu sayede container'da degil de bilgisayardaki kodu mesela pycharm ile editleyip kaydedince, docker'in icindeki kod da guncellenmis oluyor kendiliginden, tekrar build etmeden.
+ve en nihayetinde django'yu 8000 portunda, ayaga kaldiriyor.
+
+
+
+yeni bir bower paket'i eklemek icin, deployment/packagefiles/bower.txt'ye paketi yazmak, 0_bower.sh ve sonra 3_django.sh'i calistirmak gerekiyor.
+
+yeni bir python paket'i eklemek icin, deployment/packagefiles/requirements.txt'ye paketi yazmak, ve 3_django.sh'i calistirmak gerekiyor.
+
+resources/volumes dosyasi gitignore'a ekli. bir makinedeki database'i tasimak icin, resources/volumes'u kopyalayip 2.sh ve 3.sh scriptlerini calistirmak yeterli olmali.
+
 ## 5. Guidelines
 
 #### Implementation
