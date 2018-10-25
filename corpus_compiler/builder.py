@@ -104,15 +104,15 @@ if __name__ == "__main__":
         corpus = TbmmCorpus(metadata=True, config=config,
                             inmemory=False, corpus_filename=args.corpus_filename)
 
-        for idx, filepath in enumerate(glob.iglob(config["data_dir"] + '/**/', recursive=True)):
+        for idx, filepath in enumerate(glob.iglob(config["txt_files_dir"] + '/**/', recursive=True)):
 
             if args.max_documents != 0 and idx == args.max_documents:
                 print_err("Stopping as we hit the max documents limit: %d" % args.max_documents)
                 break
-            if check_if_pdf_directory(filepath.replace(config["data_dir"], "")):
+            if check_if_pdf_directory(filepath.replace(config["txt_files_dir"], "")):
                 print(idx, filepath)
                 document = combine_files_in_the_pdf_directory(filepath)
-                metadata_filepath = filepath.replace(config["data_dir"], "")
+                metadata_filepath = filepath.replace(config["txt_files_dir"], "")
                 corpus.add_document(document, metadata_filepath)
             else:
                 continue

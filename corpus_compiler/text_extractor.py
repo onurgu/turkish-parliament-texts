@@ -4,7 +4,7 @@ import re
 from subprocess import Popen, PIPE
 
 
-def parse_oturum_dosyasi(oturum_html_str):
+def parse_session_html(oturum_html_str):
     from bs4 import BeautifulSoup
     soup = BeautifulSoup(oturum_html_str, 'html.parser')
 
@@ -85,5 +85,5 @@ if __name__ == "__main__":
     elif args.command == "parse_oturum_dosyasi":
         assert args.input_file, "You should supply input_file argument with this command"
         with open(args.input_file, "r", encoding="utf-8") as f:
-            paragraphs = parse_oturum_dosyasi("\n".join(f.readlines()))
+            paragraphs = parse_session_html("\n".join(f.readlines()))
             print("\n".join(paragraphs))
