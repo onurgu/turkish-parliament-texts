@@ -7,19 +7,16 @@ name = "pypi"
 
 [dev-packages]
 
-
-
 [packages]
 
-gensim = "*"
-nltk = "*"
-ipython = "*"
-matplotlib = "*"
-data-hacks = "*"
-seaborn = "*"
-jupyter = "*"
-beautifulsoup4 = "*"
-
+gensim = "===3.6.0"
+nltk = "==3.3.0"
+ipython = "==7.1.1"
+matplotlib = "==3.0.1"
+data-hacks = "==0.3.1"
+seaborn = "==0.9.0"
+jupyter = "==1.0.0"
+beautifulsoup4 = "==4.6.3"
 
 [requires]
 
