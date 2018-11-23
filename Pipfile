@@ -19,6 +19,8 @@ data-hacks = "*"
 seaborn = "*"
 jupyter = "*"
 beautifulsoup4 = "*"
+wget = "*"
+requests = "*"
 
 
 [requires]
