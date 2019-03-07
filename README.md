@@ -1,5 +1,22 @@
 # A Corpus of Grand National Assembly of Turkish Parliament's Transcripts
 
+## To reference this work, use:
+
+    @InProceedings{GUNGOR18.19,
+    author = {Onur Gungor ,Mert Tiftikci and Çağıl Sönmez},
+    title = {A Corpus of Grand National Assembly of Turkish Parliament's Transcripts},
+    booktitle = {Proceedings of the Eleventh International Conference on Language Resources and Evaluation (LREC 2018)},
+    year = {2018},
+    month = {may},
+    date = {7-12},
+    location = {Miyazaki, Japan},
+    editor = {Darja Fišer and Maria Eskevich and Franciska de Jong},
+    publisher = {European Language Resources Association (ELRA)},
+    address = {Paris, France},
+    isbn = {979-10-95546-02-3},
+    language = {english}
+    }
+
 ==== Scroll down for English.
 
 
